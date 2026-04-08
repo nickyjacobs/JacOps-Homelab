@@ -1,4 +1,4 @@
-# jacops-homelab
+# JacOps Homelab
 
 🇬🇧 English | 🇳🇱 [Nederlands](README.nl.md)
 
