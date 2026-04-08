@@ -10,6 +10,10 @@ Regel-gebaseerde firewalls worden snel onleesbaar. Tien VLANs staat gelijk aan h
 
 Moderne UniFi ondersteunt zone-based firewalling native. Custom zones zijn standaard deny-all naar elkaar, en dat is precies wat ik wil.
 
+## Zone matrix in één oogopslag
+
+![Zone-based firewall matrix](diagrams/zone-matrix.svg)
+
 ## Zone-indeling
 
 | Zone | Bevat | Vertrouwensniveau |

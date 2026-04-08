@@ -38,6 +38,8 @@ Het VPN-subnet landt in de ingebouwde `VPN`-zone uit het [zone-document](03-zone
 
 ## Split tunnel versus full tunnel
 
+![WireGuard routing: split vs full tunnel](diagrams/wireguard-routing.svg)
+
 De keuze draait om wat de client moet doen met verkeer dat niets met de homelab te maken heeft.
 
 **Split tunnel** stuurt alleen verkeer voor de homelab-subnets door de VPN. De rest, inclusief normaal browsen, verlaat de client rechtstreeks via de lokale internetverbinding. Dit is de default voor dagelijks beheerwerk: snel, weinig bandbreedte op de thuis-WAN, en geen onverwachte latency tijdens videogesprekken.

@@ -30,23 +30,7 @@ The cluster has two nodes. That is enough to practice cluster concepts (quorum, 
 
 ## Physical topology
 
-```
-            Internet (PPPoE)
-                  │
-         ┌────────┴────────┐
-         │  Cloud Gateway  │  routing, firewall, VPN, IPS
-         └────────┬────────┘
-                  │ trunk
-         ┌────────┴────────┐
-         │     Switch      │  8 port PoE, VLAN aware
-         └─┬──────┬──────┬─┘
-           │      │      │
-           │      │      └── Access Point (WiFi 6)
-           │      │
-           │      └── Proxmox node 2 (trunk)
-           │
-           └── Proxmox node 1 (trunk)
-```
+![Homelab network topology](diagrams/topology.svg)
 
 Both Proxmox nodes connect as trunk ports. The bridge on each hypervisor is VLAN aware, so any VLAN can land on any VM or container without touching switch configuration.
 

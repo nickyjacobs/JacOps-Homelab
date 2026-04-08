@@ -10,6 +10,10 @@ Rule-based firewalls become unreadable fast. Ten VLANs means up to a hundred dir
 
 Modern UniFi supports zone-based firewalling natively. Custom zones are deny-all by default between each other, which is exactly what I want.
 
+## Zone matrix at a glance
+
+![Zone-based firewall matrix](diagrams/zone-matrix.svg)
+
 ## Zone layout
 
 | Zone | Contains | Trust level |
