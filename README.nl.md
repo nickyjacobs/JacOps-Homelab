@@ -21,6 +21,9 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Sectie | Beschrijving |
 |--------|--------------|
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
+| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, volledige security hardening |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma |
+| [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
 ## Tech stack
 
@@ -40,8 +43,12 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Zone-based firewall gedocumenteerd | Klaar |
 | WireGuard remote access gedocumenteerd | Klaar |
 | Cybersecurity hardening gedocumenteerd | Klaar |
-| Proxmox cluster documentatie | Gepland |
-| Self-hosted services documentatie | Gepland |
+| Ontwerpbeslissingen gedocumenteerd | Klaar |
+| Geleerde lessen gedocumenteerd | Klaar |
+| Proxmox cluster setup gedocumenteerd | Klaar |
+| Proxmox hardening gedocumenteerd | Klaar |
+| n8n service gedocumenteerd | Klaar |
+| Uptime Kuma service gedocumenteerd | Klaar |
 
 ## Over JacOps
 

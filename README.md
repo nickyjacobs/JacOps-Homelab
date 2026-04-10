@@ -21,6 +21,9 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Section | Description |
 |---------|-------------|
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
+| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, full security hardening |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma |
+| [docs/](docs/) | Design decisions and lessons learned |
 
 ## Tech stack
 
@@ -40,8 +43,12 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Zone-based firewall documented | Done |
 | WireGuard remote access documented | Done |
 | Cybersecurity hardening documented | Done |
-| Proxmox cluster documentation | Planned |
-| Self-hosted services documentation | Planned |
+| Design decisions documented | Done |
+| Lessons learned documented | Done |
+| Proxmox cluster setup documented | Done |
+| Proxmox hardening documented | Done |
+| n8n service documented | Done |
+| Uptime Kuma service documented | Done |
 
 ## About JacOps
 
