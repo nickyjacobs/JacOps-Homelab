@@ -81,6 +81,80 @@ Ik paste `server.yml` in de container aan, herstartte ntfy, en ging ervan uit da
 
 **Les:** kies één bron van waarheid per instelling. Voor gecontaineriseerde services zijn environment variables meestal de betere keuze, omdat die met de compose file meereizen en zichtbaar zijn in `docker inspect`. Gebruik je liever het config-bestand, zorg er dan voor dat de env vars niet gezet zijn, niet dat ze op dezelfde waarde staan.
 
+## Documentatie die "afgerond" staat hoeft de realiteit niet te beschrijven
+
+De hardening-documentatie van het Proxmox cluster stond in de lokale werkmap als volledig afgerond. Alle negen fases met een vinkje, inclusief SSH-hardening en een dedicated admin-user met sudo. Een vervolgsessie die begon met een SSH-check op beide nodes bracht aan het licht dat de `sudo`-binary helemaal niet geinstalleerd was, en dat `PermitRootLogin yes` plus `X11Forwarding yes` nog actief waren in `sshd_config`. De wijzigingen waren gepland en opgeschreven, maar niet op de nodes doorgezet.
+
+De oorzaak is moeilijk achteraf te reconstrueren. Mogelijk heeft een sessie de config aangepast zonder een `systemctl reload ssh`, waarna iemand de node later herstart heeft zonder de config-file op disk te updaten. Mogelijk heeft een rollback van iets anders de SSH-wijzigingen mee teruggedraaid. Wat de oorzaak ook was, de documentatie en de werkelijkheid liepen uit elkaar zonder dat iemand het merkte.
+
+**Les:** verifieer de werkelijke staat voordat je op documentatie vertrouwt. Voor elke sessie die voortbouwt op een eerdere, is een drie-minuten check via SSH van kritieke config-bestanden goedkoper dan een uur debuggen van iets dat "al geregeld zou moeten zijn". Een `sshd -T | grep -E 'permitroot|password|x11'` zegt meer dan een vinkje in een README.
+
+## US en NL keyboard layout in installer-password prompts
+
+De eerste installatie van Proxmox Backup Server eindigde met een root password dat niet meer werkte. Niet in SSH, niet in de web UI, niet in de console via noVNC. De installer vroeg om een password-bevestiging door het twee keer te typen en accepteerde beide invoer als matchend. Na reboot bleek het password dat ik nu typte niet het password dat ik tijdens install had bedoeld in te geven.
+
+De oorzaak was een layout-mismatch. De installer stond op US-toetsenbord, wat in de praktijk betekent dat speciale tekens zoals `@`, `#`, `/`, `|` en `\` op andere posities zitten dan op een Mac met Nederlandse of US-International layout. Het password bevatte een `@` dat bij installtijd een ander teken opleverde dan bij login-tijd. De dubbele bevestigings-prompt detecteerde dat niet, omdat tijdens de install dezelfde layout werd gebruikt voor beide invoer.
+
+De oplossing was reinstall met een password dat alleen letters (a-z, A-Z) en cijfers (0-9) bevat. Die tekens hebben dezelfde positie op vrijwel elke keyboard-layout, dus het password typt hetzelfde uit ongeacht waar het vandaan komt.
+
+**Les:** voor installer-prompts in een browser-console, of voor virtuele consoles die hun eigen keyboard-handling doen, kies een password dat layout-onafhankelijk is. Dat betekent in de praktijk: alleen alfanumerieke tekens, geen speciale karakters. Het verlies aan entropie compenseer je door extra lengte. Een wachtwoord van twintig tekens met alleen letters en cijfers is sterker dan een van twaalf tekens met speciale tekens die je niet betrouwbaar kunt typen.
+
+## Proxmox VMs booten na installer opnieuw naar de installer
+
+De standaard boot-order van een nieuw aangemaakte VM in Proxmox is `ide2;scsi0`, waarbij `ide2` de CDROM is en `scsi0` de OS-disk. Dat is prima voor de eerste boot (want dan komt de installer van de CDROM), maar niet voor de tweede. Na een succesvolle installatie gaf ik de VM een reboot via de installer's "reboot" optie, waarna dezelfde installer opnieuw opstartte omdat de boot-order nog steeds CDROM-eerst stond.
+
+Proxmox detecteert dit niet automatisch. De installer schrijft het systeem naar `/dev/sda`, meldt dat de installatie klaar is, en rebooted. Bij de volgende boot grijpt BIOS naar `ide2` omdat die eerst in de lijst staat, ziet de ISO nog steeds gemount in de CDROM-slot, en start het installer-menu opnieuw.
+
+De fix is twee stappen na de succesvolle install: boot-order wijzigen naar `scsi0` only (of de CDROM verwijderen uit de order), en de ISO detachen zodat een expliciete F2-boot naar CDROM ook niet meer kan. Beide via `qm set`:
+
+```
+qm set <vmid> --boot order='scsi0'
+qm set <vmid> --ide2 none,media=cdrom
+```
+
+**Les:** in Proxmox is post-install configuratie van een VM even belangrijk als de installatie zelf. Een standaard checklist voor elke nieuwe VM zou minimaal moeten bevatten: boot-order naar disk-only, ISO ejecten, `onboot=1` als het productie is, `qemu-guest-agent` enablen in de VM options, en een post-install snapshot voordat de eerste workload erin landt.
+
+## Stale SSH host-keys blokkeren ssh-copy-id bij reinstalls
+
+Na een PBS reinstall faalde `ssh-copy-id` met `REMOTE HOST IDENTIFICATION HAS CHANGED`. De vorige install had een host-key gegenereerd en een entry in `~/.ssh/known_hosts` achtergelaten. De reinstall genereerde nieuwe host-keys. SSH weigerde te verbinden omdat de fingerprint niet overeenkwam met wat hij in known_hosts had staan.
+
+Dat is precies het juiste gedrag. Een gewijzigde host-key kan een legitieme reinstall zijn, maar ook een man-in-the-middle. SSH kiest defaults aan de veilige kant: blokkeren tot de gebruiker bevestigt wat er is gebeurd.
+
+De fix is `ssh-keygen -R <hostname-or-ip>` om de oude entry te verwijderen, gevolgd door een nieuwe `ssh-copy-id`-poging die de nieuwe host-key accepteert en de public key installeert.
+
+```
+ssh-keygen -R 10.0.10.180
+ssh-copy-id root@10.0.10.180
+```
+
+**Les:** bij elke reinstall van een host die via key-auth benaderd wordt, is `ssh-keygen -R` de eerste stap voordat je weer probeert te verbinden. Dit hoort in een mental-checklist voor post-reinstall operaties, naast "nieuwe cert fingerprint noteren" en "eerste succesvolle login verifieren".
+
+## Debian deb822 sources disablen vraagt een rename, geen comment-hack
+
+Voor oudere `.list`-formaat sources.list.d bestanden werkt het prima om de enige regel met een `#` te prefixen om de hele repo te deactiveren. Voor het nieuwere `.sources` formaat (deb822-stijl, standaard sinds Debian 12) werkt dat niet. Deze bestanden zijn gestructureerde stanzas met `Types:`, `URIs:`, `Suites:` en `Components:` op eigen regels. Het commentariseren van alleen de `Types:`-regel maakt het bestand ongeldig in plaats van uitgeschakeld, omdat de andere regels nog actief zijn maar geen geldige stanza vormen.
+
+De manifestatie was apt die `Malformed stanza 1` gaf op de pbs-enterprise.sources file nadat ik de `Types:`-regel had uitgeschreven. apt weigerde elke update uit te voeren totdat het bestand weer syntactisch klopte.
+
+De oplossing is een rename naar iets wat apt niet leest, bijvoorbeeld `.sources.disabled`:
+
+```
+mv /etc/apt/sources.list.d/pbs-enterprise.sources /etc/apt/sources.list.d/pbs-enterprise.sources.disabled
+```
+
+Alternatief: de hele file verwijderen als je zeker weet dat je hem nooit meer nodig hebt. Een rename is minder destructief omdat het ruimte laat voor een latere enable zonder de content opnieuw te moeten typen.
+
+**Les:** check het formaat van de source-file voordat je hem probeert te editen. `.list`-formaat gebruikt `#` voor comments, `.sources`-formaat gebruikt rename of delete. Een `Enabled: false` veld bestaat niet in deb822, dus dat werkt ook niet.
+
+## Circular dependency bij PBS als VM op de hypervisor
+
+PBS draaien als VM op een PVE-host die hij zelf backup-dekt introduceert een circulaire afhankelijkheid. De PBS-VM bevat de datastore met alle andere backups. Als je hem in een PBS-side backup meeneemt, staat zijn backup in zichzelf, wat niet herstelbaar is als de VM zelf beschadigd raakt.
+
+Het eerste instinct is de PBS-VM gewoon in de `weekly-backup` job laten meelopen. Dat werkt tot de dag dat je hem nodig hebt. Dan ontdek je dat de recovery-flow is: start PBS om de backup van PBS te kunnen lezen om PBS te restoren. Dat werkt niet.
+
+De oplossing is een tweede vzdump-job met een andere scope en een ander target. De productie-job schrijft naar PBS en excludeert VM 180. Een aparte job backupt alleen VM 180 en schrijft naar de directe SATA-directory (dezelfde bulk-disk, maar via de oude vzdump-flow, niet via PBS). De twee paden delen fysieke hardware maar zijn onafhankelijk op de applicatielaag: een kapot PBS-proces breekt de SATA-directory-backup niet.
+
+**Les:** zodra een service tegelijk producent en consument van zijn eigen backup-pad is, moet er een alternatief pad bestaan dat die service niet nodig heeft. Dat is niet uniek voor PBS. Hetzelfde geldt voor een database die zijn eigen backups in zijn eigen tabellen opslaat, een log-aggregator die alleen naar zijn eigen logs schrijft, of een secrets-vault waarvan de herstel-sleutel in de vault zelf staat. Het patroon is altijd hetzelfde: de recovery-route moet fysiek en logisch losstaan van wat er gerecovered wordt.
+
 ## Uptime Kuma 2.x heeft wachtwoord-beveiliging van status pages weggehaald
 
 In Uptime Kuma v1.x kon een publieke status page met een simpel wachtwoord beveiligd worden. Invullen, delen met wie het nodig heeft, klaar. In v2.x is die functie weg. Status pages zijn daar óf publiek (geen login) óf bereikbaar via het admin panel (login plus 2FA).

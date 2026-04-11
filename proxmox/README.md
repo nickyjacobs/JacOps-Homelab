@@ -10,3 +10,4 @@ Two-node Proxmox VE cluster running virtual machines and containers for the home
 |----------|-------|
 | [01-cluster-setup.md](01-cluster-setup.md) | Hardware, cluster configuration, VLAN-aware networking |
 | [02-hardening.md](02-hardening.md) | Full security hardening: SSH, firewall, fail2ban, 2FA, backups |
+| [03-backups.md](03-backups.md) | Proxmox Backup Server, dedup datastore, circular-dependency-safe backup strategy |

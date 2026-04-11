@@ -23,7 +23,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Sectie | Beschrijving |
 |--------|--------------|
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
-| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, volledige security hardening |
+| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, volledige security hardening, Proxmox Backup Server |
 | [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
@@ -35,6 +35,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 - **Hypervisor:** Proxmox VE 9.x cluster (2 nodes)
 - **VPN:** WireGuard met dynamic DNS
 - **Monitoring:** Uptime Kuma met self-hosted ntfy voor alerts
+- **Backups:** Proxmox Backup Server met dedup en verify
 - **Automatisering:** n8n
 - **Security tooling:** Wazuh (gepland na eJPT)
 
@@ -51,6 +52,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Geleerde lessen gedocumenteerd | Klaar |
 | Proxmox cluster setup gedocumenteerd | Klaar |
 | Proxmox hardening gedocumenteerd | Klaar |
+| Proxmox Backup Server gedocumenteerd | Klaar |
 | n8n service gedocumenteerd | Klaar |
 | Uptime Kuma service gedocumenteerd | Klaar |
 | ntfy service gedocumenteerd | Klaar |

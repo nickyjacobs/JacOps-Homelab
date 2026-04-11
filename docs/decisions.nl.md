@@ -134,6 +134,77 @@ De tweede ingeving was de pagina compleet achter Cloudflare Access of een wachtw
 
 Het gekozen pad is een publieke pagina met een beperkte monitor-lijst. Alleen de services die naar buiten mogen staan erop: n8n, ntfy en Uptime Kuma zelf. Alles wat intern is (Proxmox, UniFi, DNS, lokale container-checks) is voor de admin zichtbaar via het dashboard na login, maar onzichtbaar op de publieke pagina. De portfolio-waarde blijft, en het OSINT-oppervlak blijft klein.
 
+## Container images pinnen op tag plus SHA256 digest
+
+**Datum:** 2026-04-11
+**Gebied:** Supply chain
+
+De n8n compose stack draaide met floating `latest` tags op alle drie de containers: n8n zelf, Postgres en cloudflared. Dat is de default uit de meeste quickstarts en werkt prima totdat het niet meer werkt. Een image-publisher die per ongeluk een breaking change uitrolt, of een upstream die gecompromitteerd wordt, is via `latest` direct jouw productie binnen zodra iemand `docker compose pull` draait.
+
+De keuze werd om elk image te pinnen op zowel de leesbare tag als de SHA256 digest van het specifieke image dat op dat moment draaide. Het formaat wordt `repo:tag@sha256:hash`. De tag blijft leesbaar voor mensen die de config later openen, de digest is cryptografisch: zelfs als iemand de tag overschrijft, wijst dit image-referentie nog steeds naar het exacte image dat getest is.
+
+Het effect is dat upgrades bewuste acties worden. Een nieuwe n8n-versie proberen vereist dat ik de digest expliciet update, een pull doe, en opnieuw deploy. Geen stille sprong naar een versie die ik niet heb getest. Voor een homelab dat naar een klant-rollout-patroon beweegt is dit de juiste gewoonte.
+
+De afweging is iets meer werk bij elke upgrade in ruil voor voorspelbaarheid. Ik accepteer dat.
+
+## Proxmox Backup Server als VM op de hypervisor
+
+**Datum:** 2026-04-11
+**Gebied:** Backup infrastructuur
+
+De officiele Proxmox-aanbeveling is dat PBS op fysiek gescheiden hardware draait. In een homelab met twee PVE-nodes en geen derde machine valt die aanbeveling weg. Ik stond voor drie opties: geen PBS (en bij vzdump blijven), PBS op een externe VPS via WireGuard, of PBS als VM op een van de PVE-hosts zelf.
+
+PBS overslaan betekent deduplicatie, verify-jobs, incremental-forever en encryption-at-rest opgeven. Dat zijn precies de dingen die moderne backup-infrastructuur onderscheiden van "een tar-bestand ergens neerzetten". Voor een setup die naar klantwerk beweegt is het leren van de PBS-flow waardevoller dan de eenvoud van vzdump behouden.
+
+PBS op een externe VPS geeft fysieke scheiding terug, maar verplaatst alle backup-data buiten het eigen netwerk. Dat kost bandbreedte, vraagt encryption-keys op afstand, en maakt restore-operaties langzamer. Voor een homelab op deze schaal weegt de extra complexiteit niet op tegen de fysieke scheidingswinst.
+
+De gekozen route is PBS als VM op Node 1, met een expliciete oplossing voor de circular dependency die deze keuze introduceert. De VM schrijft zijn datastore als qcow2-bestand op de SATA-directory, en een tweede backup-job draait elke maandag om 04:00 die alleen de PBS-VM zelf via vzdump naar diezelfde SATA-directory schrijft. Bij catastrofaal verlies van de PBS-VM kan hij teruggezet worden vanuit de vzdump-snapshot, waarna de datastore (die in een apart qcow2-bestand op dezelfde disk leeft) onaangetast beschikbaar blijft.
+
+De prijs is een tweede backup-job en een documentatie-last: de recovery-procedure voor PBS zelf loopt niet via PBS. Zolang Job 2 elke maandag draait en de notificatie-at-failure aan staat, blijft dat pad in beeld.
+
+## ext4 boven ZFS voor een single-disk PBS datastore
+
+**Datum:** 2026-04-11
+**Gebied:** Backup infrastructuur
+
+De PBS installer vraagt tijdens setup welk filesystem de datastore krijgt. ZFS is de canonieke aanbeveling omdat het compressie, checksums en snapshots native aanbiedt. Op een enkele virtuele disk verdwijnt het grootste ZFS-voordeel: er is geen redundantie tussen disks, dus checksums kunnen corruptie opsporen maar niet herstellen.
+
+De ZFS ARC-cache vraagt standaard ongeveer 1 GB extra RAM. Op een PBS-VM die al krap op 4 GB zit is dat een significante tax zonder directe winst. PBS doet zijn eigen deduplicatie en chunk-hashing op applicatielaag, dus de compressie-winst van het filesystem stapelt niet op een zinvolle manier op wat PBS al doet.
+
+ext4 werd de keuze. De redundantielaag zit een niveau hoger: het qcow2-bestand waar de datastore in leeft wordt meegenomen in de `pbs-self-backup`-job, en filesystem-corruptie wordt opgevangen door fsck tijdens boot plus de `verify-new=true`-instelling die elke nieuwe backup direct na upload controleert.
+
+Als de PBS-VM ooit naar dedicated hardware met meerdere disks migreert, wordt ZFS de juiste keuze. Op deze schaal is de eenvoud van ext4 de betere trade-off.
+
+## API-token boven wachtwoord voor PVE-PBS integratie
+
+**Datum:** 2026-04-11
+**Gebied:** Backup infrastructuur
+
+PVE kan PBS benaderen met een gebruikersnaam-plus-wachtwoord of met een API-token. De `pvesm add pbs`-flow ondersteunt beide. Een wachtwoord voor `root@pam` is de snelste route: twee regels config en je hebt verbinding.
+
+De API-token-route kost meer stappen maar verdient zichzelf terug. De flow is: dedicated service-account aanmaken (`pve-sync@pbs`), DatastoreBackup-rechten scoped op `/datastore/main`, token genereren onder dat account, dezelfde DatastoreBackup-role expliciet op de token zetten, en de token-waarde in de PVE storage-config plakken.
+
+Drie voordelen tegen één nadeel. Het voordeel is revocatie-granulariteit: als de token lekt, trek je dat ene token in en de rest van de authenticatie blijft intact. Een gelekt root-wachtwoord daarentegen vraagt een rotatie over alle systemen die het gebruiken. Het tweede voordeel is scope: de token heeft alleen backup-rechten op één datastore, geen admin-rechten op andere delen van PBS. Het derde voordeel is dat het service-account wachtwoord nooit door een mens gebruikt hoeft te worden. Het blijft een random gegenereerde waarde die niemand onthoudt en die in geen enkel script staat.
+
+Het nadeel is complexiteit bij de eerste setup. Twee ACL-entries in plaats van één, en een generate-token stap. Bij elke andere interactie met dit pad is het tokensysteem makkelijker omdat het geen menselijke geheugen vraagt.
+
+## Foundation layer herzien na validatie-ronde
+
+**Datum:** 2026-04-11
+**Gebied:** Service-selectie
+
+De eerste planning voor de foundation layer bevatte Forgejo, Vaultwarden, LiteLLM, Apprise en Changedetection.io als de vijf "must-have" services voor de volgende uitbreidingsronde. Een diepgaande validatie-ronde bracht drie van die vijf in twijfel.
+
+**LiteLLM werd geschrapt.** In maart 2026 werden twee PyPI-versies van LiteLLM gecompromitteerd via een backdoor in de CI/CD-pipeline. Kort daarna volgde een reeks kritieke CVEs, waaronder een OIDC auth bypass en een privilege escalation. Voor een solo-gebruiker van Claude Code levert LiteLLM vooral centrale cost tracking en virtual keys per skill op. Beide bleken minder scherp dan verwacht: virtual keys vereisen dat elke skill in een aparte proces-context draait, wat de workflow breekt. Het alternatief `ccusage` leest de eigen JSONL session-logs van Claude Code direct en geeft 90% van de cost tracking waarde zonder extra infrastructuur. De afweging tussen een centrale proxy met een actieve supply-chain-geschiedenis en een read-only tool die niets toevoegt aan de attack surface viel naar de tweede.
+
+**Apprise werd geschrapt.** De assumptie was dat Apprise als universele notification-abstraction waardevol is. Bij nader inzien heeft ntfy (al draaiend) inmiddels declarative users, ACL's, tokens en templates. De use-cases die Apprise zou oplossen zijn oplosbaar met directe webhooks of de ntfy CLI. Geen concrete pijn om op te lossen, dus geen reden om een service toe te voegen.
+
+**Changedetection.io werd vervangen door Miniflux.** De oorspronkelijke use-case was CVE-feeds en vendor-advisories naar de threat-intel workflow brengen. Changedetection.io heeft in de afgelopen zes maanden drie noemenswaardige CVEs gehad, waaronder een SSRF en een auth bypass via decorator-ordering. Het grotere probleem is dat vrijwel alle security-feeds die relevant zijn (NVD, CISA KEV, Rapid7 blog, vendor PSIRTs, GitHub releases) al RSS of Atom aanbieden. Een dedicated RSS-reader zoals Miniflux is lichter, heeft een kleiner attack surface, en dekt het gebruik beter. Changedetection.io blijft relevant voor pages zonder RSS-feed, maar als foundation-service is het de verkeerde keuze.
+
+De resultaten zijn toegevoegd aan de lijst: Forgejo en Vaultwarden blijven, PBS werd toegevoegd als kritieke eerste deploy voordat alle andere services landen, Miniflux vervangt Changedetection.io, en Beszel plus Dockge werden bijgeschreven als lichte host-metrics en compose-management laag.
+
+De les uit deze ronde is dat een service-lijst uit een handvol blog-aanbevelingen niet hetzelfde is als een gevalideerde stack. Elke service bij binnenkomst is een nieuw attack surface en een nieuwe operationele last. De vraag "wat gaat kapot zonder" is strenger dan "wat zou leuk zijn om erbij te hebben", en die strengere vraag filterde drie van de vijf oorspronkelijke keuzes weg.
+
 ## Prometheus voorlopig overslaan
 
 **Datum:** 2026-04-11

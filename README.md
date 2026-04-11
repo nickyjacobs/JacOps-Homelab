@@ -23,7 +23,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Section | Description |
 |---------|-------------|
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
-| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, full security hardening |
+| [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, full security hardening, Proxmox Backup Server |
 | [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Design decisions and lessons learned |
 
@@ -35,6 +35,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 - **Hypervisor:** Proxmox VE 9.x cluster (2 nodes)
 - **VPN:** WireGuard with dynamic DNS
 - **Monitoring:** Uptime Kuma with self-hosted ntfy for alerts
+- **Backups:** Proxmox Backup Server with dedup and verify
 - **Automation:** n8n
 - **Security tooling:** Wazuh (planned after eJPT)
 
@@ -51,6 +52,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Lessons learned documented | Done |
 | Proxmox cluster setup documented | Done |
 | Proxmox hardening documented | Done |
+| Proxmox Backup Server documented | Done |
 | n8n service documented | Done |
 | Uptime Kuma service documented | Done |
 | ntfy service documented | Done |
