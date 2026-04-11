@@ -11,3 +11,7 @@ Two-node Proxmox VE cluster running virtual machines and containers for the home
 | [01-cluster-setup.md](01-cluster-setup.md) | Hardware, cluster configuration, VLAN-aware networking |
 | [02-hardening.md](02-hardening.md) | Full security hardening: SSH, firewall, fail2ban, 2FA, backups |
 | [03-backups.md](03-backups.md) | Proxmox Backup Server, dedup datastore, circular-dependency-safe backup strategy |
+| [04-storage.md](04-storage.md) | Thin provisioning, discard and TRIM, directory storage, capacity monitoring, growth path |
+| [05-networking.md](05-networking.md) | VLAN-aware bridge, tagged sub-interfaces, firewall layers, corosync traffic, troubleshooting |
+| [06-vm-hygiene.md](06-vm-hygiene.md) | Naming, tags, guest agent, protection, boot order, review and deprovisioning |
+| [07-monitoring.md](07-monitoring.md) | Reachability versus host metrics, alerting path, Beszel roadmap, known gaps |
