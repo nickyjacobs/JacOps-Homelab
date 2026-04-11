@@ -2,6 +2,8 @@
 
 🇬🇧 English | 🇳🇱 [Nederlands](README.nl.md)
 
+![JacOps Homelab & Infrastructure](assets/hero.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Status](https://img.shields.io/badge/status-in%20progress-orange)
 ![Made with](https://img.shields.io/badge/built%20with-Proxmox%20%7C%20UniFi%20%7C%20WireGuard-blueviolet)
@@ -22,7 +24,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 |---------|-------------|
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, full security hardening |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Design decisions and lessons learned |
 
 ## Tech stack
@@ -32,7 +34,9 @@ This first release covers the network layer end to end. Proxmox cluster and self
 - **WiFi:** UniFi U6 Pro
 - **Hypervisor:** Proxmox VE 9.x cluster (2 nodes)
 - **VPN:** WireGuard with dynamic DNS
-- **Monitoring and security:** planned (Wazuh, Uptime Kuma)
+- **Monitoring:** Uptime Kuma with self-hosted ntfy for alerts
+- **Automation:** n8n
+- **Security tooling:** Wazuh (planned after eJPT)
 
 ## Status
 
@@ -49,6 +53,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Proxmox hardening documented | Done |
 | n8n service documented | Done |
 | Uptime Kuma service documented | Done |
+| ntfy service documented | Done |
 
 ## About JacOps
 

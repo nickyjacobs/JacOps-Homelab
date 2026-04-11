@@ -2,6 +2,8 @@
 
 🇬🇧 [English](README.md) | 🇳🇱 Nederlands
 
+![JacOps Homelab & Infrastructure](assets/hero.png)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Status](https://img.shields.io/badge/status-in%20progress-orange)
 ![Made with](https://img.shields.io/badge/built%20with-Proxmox%20%7C%20UniFi%20%7C%20WireGuard-blueviolet)
@@ -22,7 +24,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 |--------|--------------|
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, VLAN-aware networking, volledige security hardening |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
 ## Tech stack
@@ -32,7 +34,9 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 - **WiFi:** UniFi U6 Pro
 - **Hypervisor:** Proxmox VE 9.x cluster (2 nodes)
 - **VPN:** WireGuard met dynamic DNS
-- **Monitoring en security:** gepland (Wazuh, Uptime Kuma)
+- **Monitoring:** Uptime Kuma met self-hosted ntfy voor alerts
+- **Automatisering:** n8n
+- **Security tooling:** Wazuh (gepland na eJPT)
 
 ## Status
 
@@ -49,6 +53,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Proxmox hardening gedocumenteerd | Klaar |
 | n8n service gedocumenteerd | Klaar |
 | Uptime Kuma service gedocumenteerd | Klaar |
+| ntfy service gedocumenteerd | Klaar |
 
 ## Over JacOps
 
