@@ -42,3 +42,14 @@ build/
 
 # Private session logs (local only, not for public portfolio)
 docs/sessions/
+
+# Claude Code workspace — alles in git behalve lokale en runtime files
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/hooks/*.log
+.claude/cache/
+CLAUDE.local.md
+
+# Universele lokale-suffix conventie (lokale notes, drafts, scratch)
+*.local.md
+*.draft.md
