@@ -39,3 +39,6 @@ venv/
 # Build
 dist/
 build/
+
+# Private session logs (local only, not for public portfolio)
+docs/sessions/
