@@ -62,3 +62,29 @@ This is good design on UniFi's part, but I only discovered it during the migrati
 WireGuard already authenticates peers through public key cryptography. Adding a pre-shared key (PSK) on top is optional and adds another symmetric encryption layer. The setup cost is one extra line in each peer config.
 
 The reason to use it: post-quantum resistance. If someone captures WireGuard traffic today and breaks Curve25519 in ten years, the PSK layer still protects the session. For a homelab this is arguably overkill, but the cost is near zero and the habit is worth building.
+
+## iOS ntfy push breaks when the base URL does not match exactly
+
+Self-hosted ntfy uses an upstream pattern for iOS notifications. The server forwards a poll request to `ntfy.sh` using a SHA256 hash that is computed from `base-url + topic`. The iOS app computes the same hash from the default server URL that the user entered. When the two hashes do not match, pushes never arrive on the phone.
+
+I spent over an hour chasing this problem. Notifications showed up in the ntfy web UI and in the iOS app when I opened it manually, but never as banners. Every config file looked correct. The debug logs showed a successful `Publishing poll request` line. Everything appeared healthy, and nothing worked.
+
+The cause was a typo in the Docker Compose file. The `NTFY_BASE_URL` environment variable was set to `https://ntfy.example.nl` while the actual public URL used the `.online` TLD. The config file inside the container had the correct `.online` value, but environment variables override config files in ntfy. The server was hashing against one URL, the iOS app against another, and the two never met at `ntfy.sh`.
+
+**Takeaway:** set the base URL in exactly one place (either the env var or the config file, never both), verify the `/v1/config` endpoint returns what you expect, and double-check the default server URL stored in the iOS app character by character. The silent failure mode is particularly brutal because every diagnostic suggests things are working.
+
+## Docker environment variables override config files silently
+
+Closely related to the ntfy base URL issue: ntfy (and many other Go services) let you configure the same setting through either a YAML config file or an environment variable. When both exist, the environment variable wins. There is no warning, no startup log line, nothing that says "I am ignoring your config file."
+
+I updated `server.yml` inside the container, restarted ntfy, and assumed my change had taken effect. It had not. The env var from `docker-compose.yml` was still driving the behaviour, and my "fix" did nothing.
+
+**Takeaway:** pick one source of truth per setting. For containerized services, environment variables are usually the better choice because they travel with the compose file and show up in `docker inspect`. If you use the config file instead, make sure the env vars are not set at all, not just set to the same value.
+
+## Uptime Kuma 2.x removed status page password protection
+
+In Uptime Kuma v1.x, a public status page could be protected with a simple password. Paste it in, share it with whoever needs access, done. The feature disappeared in v2.x. The status pages in v2 are either public (no auth at all) or accessed through the admin panel (which requires a user login plus 2FA).
+
+I planned to run two status pages: one public with curated monitors, one internal with everything behind a password. The second page is no longer possible without external tools. Cloudflare Access would work for a browser, but it breaks native apps that cannot handle the Access login redirect, and the ntfy iOS app is one of them. For the homelab, the internal status page became "the admin dashboard after login", which is functionally the same thing minus a custom page layout.
+
+**Takeaway:** before planning a feature, verify it still exists in the version you are running. Major version bumps quietly drop features more often than changelogs advertise. For Uptime Kuma specifically, v2 is a substantial rewrite and several v1 conveniences are gone.

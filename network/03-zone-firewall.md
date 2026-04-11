@@ -58,6 +58,8 @@ The rules below open only what a service actually needs. Every rule has a reason
 | To | Protocol and port | Reason |
 |----|-------------------|--------|
 | External | Any | Outbound webhooks and API calls |
+| Mgmt | ICMP echo request | Uptime Kuma ping probes to network hardware (switch, access point) |
+| Servers | TCP 8006 | Uptime Kuma keyword checks on Proxmox web UI |
 
 ### From SOC
 

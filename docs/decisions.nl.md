@@ -90,3 +90,59 @@ Outbound verkeer blokkeren op basis van land is fragiel. CDN's serveren content 
 DNS-queries gaan door versleutelde resolvers met ingebouwde malware- en phishingfiltering. Twee providers zijn geconfigureerd voor redundantie.
 
 Onversleutelde DNS lekt elke domeinlookup naar de ISP. Versleutelde DNS met filtering voegt twee lagen toe: privacy (de ISP kan queries niet zien) en basisprotectie (bekende kwaadaardige domeinen worden geblokkeerd op resolverniveau). Dit vervangt geen endpoint security, maar vangt de makkelijke gevallen op netwerkniveau op zonder onderhoud.
+
+## Self-hosted pushmeldingen in plaats van een externe dienst
+
+**Datum:** 2026-04-11
+**Gebied:** Monitoring
+
+Uptime Kuma ondersteunt een lange lijst aan notificatie-providers: Telegram, Discord, Slack, e-mail, ntfy en meer. De makkelijke route is Telegram of Discord kiezen, een bot opzetten, token plakken, klaar. Ik heb voor self-hosted ntfy gekozen.
+
+Elke monitoring alert bevat de hostname, het IP of de URL van een service in het homelab. Die stroom door de messaging-infrastructuur van een derde partij sturen betekent dat iemand anders een betrouwbaar beeld krijgt van welke services hier draaien en wanneer ze uitvallen. Voor een homelab dat bouwt op security-first defaults voelt dat als de verkeerde richting in ruil voor vijf minuten setup-tijd.
+
+ntfy draait als container naast Uptime Kuma. Het is licht (rond de 30-50 MB RAM), open source, en ondersteunt iOS push via een upstream patroon waarbij de publieke `ntfy.sh` instantie alleen een SHA256 hash van de topic en het bericht-ID te zien krijgt. De eigenlijke inhoud blijft in het homelab, omdat de telefoon het bericht direct bij de self-hosted server ophaalt nadat Apple's push-service hem wakker heeft gemaakt.
+
+De wissel is meer complexiteit: één extra container, één extra config-bestand, één extra troubleshooting-pad. De iOS push pipeline heeft randgevallen die niet opduiken bij een publieke ntfy.sh topic (zie [lessons-learned.nl.md](lessons-learned.nl.md)). Voor een homelab is die extra moeite het waard.
+
+## Eén Cloudflare tunnel per stack, meerdere hostnames
+
+**Datum:** 2026-04-11
+**Gebied:** Remote toegang
+
+n8n draait met een eigen Cloudflared container in de n8n stack. De monitoring stack (Uptime Kuma plus ntfy) had ook publieke toegang nodig, en er waren drie opties:
+
+1. Elke service een eigen tunnel geven (twee tunnels voor twee services in dezelfde stack)
+2. De ingebouwde tunnel van Uptime Kuma gebruiken voor UK en een aparte tunnel voor ntfy
+3. Eén losse cloudflared container in de monitoring stack die beide services routeert via één tunnel met twee hostnames
+
+Optie drie werd het. Uptime Kuma en ntfy delen een failure domain: dezelfde LXC, hetzelfde Docker netwerk, dezelfde host. Splitsen in twee tunnels maakt de opstelling niet veerkrachtiger, omdat een gecrashte LXC ze alsnog beide meeneemt. Eén tunnel met meerdere publieke hostnames is simpeler om te beheren, gebruikt minder resources, en houdt alle tunnel-config in het Cloudflare dashboard op één plek.
+
+De ingebouwde Uptime Kuma tunnel blijft om dezelfde reden ongebruikt. Een losse cloudflared container is taal-onafhankelijk, doet meerdere hostnames standaard, en wordt beheerd door Docker Compose in plaats van door het Uptime Kuma proces.
+
+Het patroon is: één tunnel per stack, één stack per LXC. n8n heeft zijn tunnel, de monitoring stack heeft zijn tunnel, en elke toekomstige stack (Wazuh en wat daarbij past) krijgt een eigen tunnel.
+
+## Publieke status page zonder interne services
+
+**Datum:** 2026-04-11
+**Gebied:** Monitoring
+
+De publieke status page van Uptime Kuma is een mooie portfolio-toevoeging. Hij laat zien dat services draaien, ziet er professioneel uit, en spiegelt wat echte SaaS-producten tonen op `status.something.com`. De vraag was wat er op zou komen.
+
+De eerste ingeving was "alles". Alle tien monitors, gegroepeerd op label, zichtbaar voor iedereen die de URL vindt. Het probleem met "alles" is dat het een gratis OSINT-blad wordt. Proxmox nodes noemen vertelt een aanvaller welke hypervisor de infrastructuur draagt. UniFi hardware noemen verraadt de netwerkleverancier. Op zichzelf is geen van die punten bruikbaar, maar elk datapunt maakt het raadspel kleiner als iemand beslist om verder te kijken.
+
+De tweede ingeving was de pagina compleet achter Cloudflare Access of een wachtwoord zetten. Cloudflare Access breekt de iOS ntfy app, omdat native apps de Access login flow niet kunnen volgen. Uptime Kuma 2.x heeft de ingebouwde password-functie voor status pages weggehaald. Volledig dichtzetten zou dus betekenen: óf iOS notificaties slopen, óf de status page helemaal laten vallen.
+
+Het gekozen pad is een publieke pagina met een beperkte monitor-lijst. Alleen de services die naar buiten mogen staan erop: n8n, ntfy en Uptime Kuma zelf. Alles wat intern is (Proxmox, UniFi, DNS, lokale container-checks) is voor de admin zichtbaar via het dashboard na login, maar onzichtbaar op de publieke pagina. De portfolio-waarde blijft, en het OSINT-oppervlak blijft klein.
+
+## Prometheus voorlopig overslaan
+
+**Datum:** 2026-04-11
+**Gebied:** Monitoring
+
+Prometheus en Grafana is de logische volgende stap in monitoring-volwassenheid. Betere metrics, betere dashboards, alerting-regels met echte logica. Het homelab is er nog niet klaar voor, en misschien voorlopig ook niet.
+
+Voor tien monitors beantwoordt het eigen dashboard van Uptime Kuma de vraag die als eerste telt: draait het of draait het niet. Prometheus zou een tweede daemon toevoegen, een scrape-config, een time-series database, Grafana erbovenop voor visualisatie, en exporters op elke host die meer diepgang vraagt. Dat is een paar uur setup en nog eens 500+ MB RAM voor een resultaat dat het antwoord op "draait het" niet wezenlijk verbetert.
+
+Prometheus wordt nuttig zodra er meerdere databronnen zijn om te combineren. Zodra Wazuh komt na de eJPT-certificering, is er data van defensieve tools om tegen beschikbaarheid en performance-metrics af te zetten. Grafana als één scherm over Uptime Kuma, Wazuh, Proxmox node-exporter en n8n begint op dat punt zichzelf terug te verdienen.
+
+Uptime Kuma heeft al een eigen `/metrics` endpoint in Prometheus-formaat, dus het migratiepad is schoon. Geen verhuizing, geen herschrijving, alleen een nieuw scrape-target.

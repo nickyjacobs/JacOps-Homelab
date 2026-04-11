@@ -58,6 +58,8 @@ De regels hieronder openen alleen wat een dienst daadwerkelijk nodig heeft. Elke
 | Naar | Protocol en poort | Reden |
 |------|-------------------|-------|
 | External | Any | Uitgaande webhooks en API calls |
+| Mgmt | ICMP echo request | Uptime Kuma ping probes naar netwerkhardware (switch, access point) |
+| Servers | TCP 8006 | Uptime Kuma keyword checks op de Proxmox web UI |
 
 ### Vanuit SOC
 

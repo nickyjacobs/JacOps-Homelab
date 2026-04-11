@@ -62,3 +62,29 @@ Dit is goed ontwerp aan UniFi's kant, maar ik ontdekte het pas tijdens de migrat
 WireGuard authenticeert peers al via public key cryptografie. Een pre-shared key (PSK) toevoegen is optioneel en voegt een extra symmetrische encryptielaag toe. De setupkosten zijn één extra regel in elke peer-config.
 
 De reden: post-quantum weerstand. Als iemand vandaag WireGuard-verkeer opvangt en Curve25519 over tien jaar kraakt, beschermt de PSK-laag de sessie nog steeds. Voor een homelab is dit misschien overdreven, maar de kosten zijn vrijwel nul en de gewoonte is het waard om op te bouwen.
+
+## iOS ntfy push breekt als de base URL niet exact gelijk is
+
+Self-hosted ntfy gebruikt een upstream-patroon voor iOS notificaties. De server stuurt een poll-request naar `ntfy.sh` met een SHA256 hash die berekend wordt uit `base-url + topic`. De iOS app berekent dezelfde hash uit de default server URL die de gebruiker heeft ingevuld. Komen de hashes niet overeen, dan arriveren pushes nooit op de telefoon.
+
+Ik heb ruim een uur achter dit probleem aangelopen. Notificaties verschenen in de ntfy web UI en in de iOS app zodra ik hem opende, maar nooit als banner. Elk config-bestand zag er correct uit. De debug logs lieten een geslaagde `Publishing poll request` regel zien. Alles leek gezond, en niks werkte.
+
+De oorzaak was een typo in de Docker Compose file. De `NTFY_BASE_URL` environment variable stond op `https://ntfy.example.nl` terwijl de echte publieke URL `.online` gebruikte. Het config-bestand in de container had wel de juiste `.online` waarde staan, maar environment variables winnen het in ntfy van config-bestanden. De server hashte tegen de ene URL, de iOS app tegen de andere, en die twee kwamen bij `ntfy.sh` nooit samen.
+
+**Les:** zet de base URL op precies één plek (óf in de env var, óf in het config-bestand, nooit allebei), controleer dat `/v1/config` teruggeeft wat je verwacht, en check de default server URL in de iOS app karakter voor karakter. De stille faalmodus is bijzonder lastig omdat elke diagnose suggereert dat het werkt.
+
+## Docker environment variables overschrijven config-bestanden in stilte
+
+Nauw verbonden met de ntfy base URL valkuil: ntfy (en veel andere Go-services) laten je dezelfde instelling configureren via een YAML config-bestand of een environment variable. Bestaan beide, dan wint de environment variable. Geen waarschuwing, geen startup-regel, niets dat zegt "ik negeer je config-bestand".
+
+Ik paste `server.yml` in de container aan, herstartte ntfy, en ging ervan uit dat mijn wijziging had gewerkt. Dat was niet zo. De env var uit `docker-compose.yml` stuurde het gedrag nog steeds aan, en mijn "fix" deed niks.
+
+**Les:** kies één bron van waarheid per instelling. Voor gecontaineriseerde services zijn environment variables meestal de betere keuze, omdat die met de compose file meereizen en zichtbaar zijn in `docker inspect`. Gebruik je liever het config-bestand, zorg er dan voor dat de env vars niet gezet zijn, niet dat ze op dezelfde waarde staan.
+
+## Uptime Kuma 2.x heeft wachtwoord-beveiliging van status pages weggehaald
+
+In Uptime Kuma v1.x kon een publieke status page met een simpel wachtwoord beveiligd worden. Invullen, delen met wie het nodig heeft, klaar. In v2.x is die functie weg. Status pages zijn daar óf publiek (geen login) óf bereikbaar via het admin panel (login plus 2FA).
+
+Ik had twee status pages gepland: een publieke met een beperkte monitor-lijst, en een interne met alles achter een wachtwoord. De tweede is niet meer mogelijk zonder externe tools. Cloudflare Access werkt voor een browser, maar breekt native apps die geen Access login redirect aankunnen, en de ntfy iOS app is er daar een van. Voor het homelab werd de interne status page dus "het admin dashboard na login", functioneel hetzelfde minus een custom layout.
+
+**Les:** voordat je een feature inplant, controleer of die nog bestaat in de versie die je draait. Grote version bumps schrappen features vaker dan changelogs suggereren. Voor Uptime Kuma specifiek: v2 is een flinke herschrijving en meerdere v1-gemakken zijn weg.

@@ -90,3 +90,59 @@ Blocking outbound by country is brittle. CDNs serve content from unexpected regi
 DNS queries go through encrypted resolvers with built-in malware and phishing filtering. Two providers are configured for redundancy.
 
 Plain DNS leaks every domain lookup to the ISP. Encrypted DNS with filtering adds two layers: privacy (ISP cannot see queries) and basic protection (known malicious domains are blocked at the resolver level). This is not a replacement for proper endpoint security, but it catches low-hanging fruit at the network level with zero maintenance.
+
+## Self-hosted push notifications over third-party services
+
+**Date:** 2026-04-11
+**Area:** Monitoring
+
+Uptime Kuma supports a long list of notification providers out of the box: Telegram, Discord, Slack, email, ntfy, and more. The easy path is to pick Telegram or Discord, set up a bot, paste the token, and move on. I went with self-hosted ntfy instead.
+
+Every monitoring alert carries the hostname, IP or URL of a service in the homelab. Sending that stream through someone else's messaging infrastructure means a third party now has a reliable view of which services run here and when they break. For a homelab that is built around security-first defaults, that felt like the wrong direction for the sake of five minutes of setup time.
+
+ntfy runs as a container alongside Uptime Kuma. It is lightweight (around 30-50 MB of RAM), open source, and supports iOS push through an upstream pattern where the public `ntfy.sh` instance only sees a SHA256 hash of the topic and the message ID. The actual alert content stays inside the homelab because the phone fetches the message body directly from the self-hosted server after being woken up by Apple's push service.
+
+The trade-off is added complexity: one more container, one more config file, one more troubleshooting path. The iOS push pipeline has edge cases that do not show up with a public ntfy.sh topic (see [lessons-learned.md](lessons-learned.md)). For a homelab the extra work is worth it.
+
+## One Cloudflare tunnel per stack, multiple hostnames
+
+**Date:** 2026-04-11
+**Area:** Remote access
+
+n8n runs with its own Cloudflared container inside the n8n stack. The monitoring stack (Uptime Kuma plus ntfy) needed public access too, and I considered three patterns:
+
+1. Give each service its own tunnel (two tunnels for two services in the same stack)
+2. Use Uptime Kuma's built-in tunnel for Uptime Kuma and add a separate tunnel for ntfy
+3. Run a single standalone cloudflared container in the monitoring stack that routes both services through one tunnel with two hostnames
+
+I picked option three. Uptime Kuma and ntfy share a failure domain: they live in the same LXC, the same Docker network, the same host. Splitting them into two tunnels would not improve resilience because a crashed LXC takes both down anyway. One tunnel with multiple public hostnames is simpler to operate, uses fewer resources, and keeps all tunnel configuration in the Cloudflare dashboard under one record.
+
+The built-in Uptime Kuma tunnel support stays unused for the same reason. A standalone cloudflared container is language-agnostic, handles multiple hostnames natively, and has its lifecycle managed by Docker Compose instead of by the Uptime Kuma process.
+
+The pattern is: one tunnel per stack, one stack per LXC. n8n has its tunnel, the monitoring stack has its tunnel, and any future stack (Wazuh plus whatever pairs with it) gets its own.
+
+## Public status page without internal services
+
+**Date:** 2026-04-11
+**Area:** Monitoring
+
+Uptime Kuma's public status page is a nice portfolio touch. It shows that services are up, it looks professional, and it mirrors what real SaaS products expose at `status.something.com`. The question was what to put on it.
+
+The first instinct was "everything". All ten monitors, grouped by label, visible to anyone who finds the URL. The problem with "everything" is that it is a free OSINT sheet. Listing Proxmox nodes tells an attacker what hypervisor runs the infrastructure. Listing UniFi hardware tells them the network vendor. None of this is actionable on its own, but each data point narrows the guessing game if somebody decides to look harder.
+
+The second instinct was to lock the page entirely behind Cloudflare Access or a password. Cloudflare Access breaks the iOS ntfy app because native apps cannot complete the Access login flow. Uptime Kuma 2.x removed its built-in status page password. So full lockdown would have meant either breaking iOS notifications or dropping the status page entirely.
+
+The chosen path is a public page with a curated monitor list. Only the services that are meant to face outside are shown: n8n, ntfy, and Uptime Kuma itself. Everything internal (Proxmox, UniFi, DNS, local container checks) is visible to the admin through the dashboard after login, but invisible to the public page. The portfolio value is preserved and the OSINT surface stays small.
+
+## Skip Prometheus for now
+
+**Date:** 2026-04-11
+**Area:** Monitoring
+
+Prometheus plus Grafana is the obvious next step in monitoring maturity. Better metrics, better dashboards, alerting rules with real logic. The homelab is not ready for it yet, and may not be ready for a while.
+
+For ten monitors, Uptime Kuma's own dashboard answers the question that matters: is it up or not. Prometheus would add a second daemon, a scrape config, a time-series database, Grafana on top for visualization, and exporters on every host that needs deeper metrics. That is multiple hours of setup and another 500+ MB of RAM for a result that does not materially improve the "is it up" answer.
+
+Prometheus becomes worthwhile when there are multiple data sources to correlate. Once Wazuh comes in after the eJPT certification, there will be defensive-tool data to cross-reference with availability and performance metrics. Grafana as a single pane over Uptime Kuma, Wazuh, Proxmox node-exporter and n8n starts to earn its keep at that point.
+
+Uptime Kuma already exposes a native `/metrics` endpoint in Prometheus format, so the upgrade path is clean. No migration, no rewrite, just a new scrape target.
