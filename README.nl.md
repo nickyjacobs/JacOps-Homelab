@@ -57,6 +57,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Proxmox networking gedocumenteerd | Klaar |
 | Proxmox VM en container hygiene gedocumenteerd | Klaar |
 | Proxmox monitoring gedocumenteerd | Klaar |
+| YubiKey hardware 2FA gedocumenteerd | Klaar |
 | n8n service gedocumenteerd | Klaar |
 | Uptime Kuma service gedocumenteerd | Klaar |
 | ntfy service gedocumenteerd | Klaar |

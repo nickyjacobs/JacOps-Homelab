@@ -57,6 +57,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Proxmox networking documented | Done |
 | Proxmox VM and container hygiene documented | Done |
 | Proxmox monitoring documented | Done |
+| YubiKey hardware 2FA documented | Done |
 | n8n service documented | Done |
 | Uptime Kuma service documented | Done |
 | ntfy service documented | Done |
