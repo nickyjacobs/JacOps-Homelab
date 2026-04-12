@@ -105,9 +105,13 @@ Deze instellingen staan in `/etc/sysctl.d/99-hardening.conf` en overleven reboot
 
 ## Fase 6: Tweefactorauthenticatie
 
-TOTP is ingeschakeld voor het root-account op de Proxmox web UI. Inloggen vereist zowel het wachtwoord als een zescijferige code uit een authenticator-app. Dit beschermt tegen diefstal van credentials: een gestolen wachtwoord alleen is niet voldoende om de management-interface te bereiken.
+Twee factoren zijn geconfigureerd voor het root-account op de Proxmox web UI.
 
-Herstelcodes worden offline bewaard voor het geval het authenticatorapparaat verloren gaat.
+**WebAuthn (primair).** Een YubiKey 5C NFC is geregistreerd als FIDO2/WebAuthn-factor. Inloggen vereist het wachtwoord plus een fysieke touch op de YubiKey en de FIDO2 PIN. Dit is phishing-resistent: de key verifieert het domein cryptografisch, dus een nep-loginpagina kan de challenge niet doorsturen.
+
+**TOTP (backup).** Een zescijferige code uit Microsoft Authenticator op de iPhone dient als terugvaloptie als de YubiKey niet beschikbaar is.
+
+De combinatie betekent dat een gestolen wachtwoord alleen niet voldoende is om de management-interface te bereiken. Herstelcodes worden offline bewaard voor het geval beide factoren verloren gaan.
 
 ## Fase 7: Opruimen van services
 
@@ -152,9 +156,9 @@ Na alle negen fases heeft het cluster:
 - Brute-force bescherming op SSH en de webinterface
 - Een host-level firewall met deny-by-default beleid
 - Geharde kernel-netwerkinstellingen
-- Tweefactorauthenticatie op de management-interface
+- Tweefactorauthenticatie op de management-interface (WebAuthn via YubiKey plus TOTP als backup)
 - Geen onnodige services die luisteren
 - Geautomatiseerde wekelijkse backups met vier weken retentie
 - Automatische Debian security patching
 
-Deze maatregelen stapelen op de netwerkniveau-verdedigingen beschreven in de [netwerksectie](../network/). De combinatie betekent dat een aanvaller de zone-based firewall, de host-level firewall, key-based SSH-authenticatie en TOTP-beveiligde webauthenticatie moet omzeilen voordat iets bruikbaars bereikt wordt.
+Deze maatregelen stapelen op de netwerkniveau-verdedigingen beschreven in de [netwerksectie](../network/). De combinatie betekent dat een aanvaller de zone-based firewall, de host-level firewall, key-based SSH-authenticatie en hardware-key-beveiligde webauthenticatie moet omzeilen voordat iets bruikbaars bereikt wordt.

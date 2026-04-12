@@ -94,7 +94,7 @@ De kern van de setup zijn twee jobs die samen de circular dependency wegwerken.
 
 **Job 1: `weekly-backup`**
 
-Deze job dekt alles behalve PBS zelf. Zondag 03:00, snapshot-mode, zstd-compressie, retentie vier weken. Target: PBS. Scope: alle VMs en containers met VM 180 expliciet uitgesloten.
+Deze job dekt alles behalve PBS zelf. Zondag 03:00, snapshot-mode, zstd-compressie. Target: PBS. Scope: alle VMs en containers met VM 180 expliciet uitgesloten. De retentie wordt niet door deze job afgedwongen maar door de PBS-side prune-job (zie Datastore-onderhoud), zodat het `pve-sync@pbs` service-account alleen `DatastoreBackup`-rechten nodig heeft en geen `Datastore.Prune`.
 
 ```
 vzdump: weekly-backup
@@ -105,7 +105,6 @@ vzdump: weekly-backup
     mailnotification failure
     mode snapshot
     notes-template {{guestname}}
-    prune-backups keep-weekly=4
     storage pbs-main
     all 1
 ```
@@ -145,7 +144,7 @@ Daarnaast staat `verify-new=true` op de datastore, wat betekent dat PBS elke nie
 
 De GC-job gebruikt PBS zijn eigen twee-fase algoritme: eerst markeert het alle chunks die nog in gebruik zijn, daarna verwijdert het de ongemarkeerde. De job kan draaien terwijl er backups lopen. Het is een veilige operatie die niet afgestemd hoeft te worden op de Job 1 / Job 2 run-schema's.
 
-De prune-retention is bewust iets ruimer dan de `keep-weekly=4` in Job 1. PBS-side prune heeft `keep-last 2, keep-weekly 4, keep-monthly 3`. Dat betekent dat recente backups extra lang blijven, wekelijkse backups volgen de vzdump-retention, en maandelijkse backups als langere tijdlijn dienen. De drie lagen kosten samen nauwelijks extra disk doordat de meeste oude maandelijkse backups vrijwel volledig deduperen met de nieuwere.
+De retentie wordt volledig door deze PBS-side prune-job afgehandeld, niet door de PVE backup-job. Het `pve-sync@pbs` service-account heeft alleen `DatastoreBackup`-rechten en geen `Datastore.Prune`. Dit volgt het principe van minimale rechten: de backup-client mag data schrijven, maar de retentie-beslissingen liggen bij PBS zelf. De combinatie `keep-last 2, keep-weekly 4, keep-monthly 3` zorgt ervoor dat recente backups extra lang blijven en maandelijkse backups een langere tijdlijn bieden. De lagen kosten samen nauwelijks extra disk doordat de meeste oude maandelijkse backups vrijwel volledig deduperen met de nieuwere.
 
 ## Eerste testrun
 

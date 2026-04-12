@@ -105,9 +105,13 @@ These settings are stored in `/etc/sysctl.d/99-hardening.conf` and survive reboo
 
 ## Phase 6: Two-factor authentication
 
-TOTP is enabled for the root account on the Proxmox web UI. Logging in requires both the password and a six-digit code from an authenticator app. This protects against credential theft: a stolen password alone is not enough to access the management interface.
+Two factors are configured for the root account on the Proxmox web UI.
 
-Recovery codes are stored offline in case the authenticator device is lost.
+**WebAuthn (primary).** A YubiKey 5C NFC is registered as a FIDO2/WebAuthn factor. Logging in requires the password plus a physical touch on the YubiKey and the FIDO2 PIN. This is phishing-resistant: the key cryptographically verifies the domain, so a fake login page cannot relay the challenge.
+
+**TOTP (backup).** A six-digit code from Microsoft Authenticator on the iPhone serves as a fallback if the YubiKey is unavailable.
+
+The combination means a stolen password alone is not enough to access the management interface. Recovery codes are stored offline in case both factors are lost.
 
 ## Phase 7: Service cleanup
 
@@ -152,9 +156,9 @@ After all nine phases, the cluster has:
 - Brute-force protection on SSH and the web interface
 - A host-level firewall with deny-by-default policy
 - Hardened kernel network settings
-- Two-factor authentication on the management interface
+- Two-factor authentication on the management interface (WebAuthn via YubiKey plus TOTP as backup)
 - No unnecessary services listening
 - Automated weekly backups with four-week retention
 - Automatic Debian security patching
 
-These controls stack with the network-level defences described in the [network section](../network/). The combination means an attacker has to bypass the zone-based firewall, the host-level firewall, key-based SSH authentication, and TOTP-protected web authentication before reaching anything useful.
+These controls stack with the network-level defences described in the [network section](../network/). The combination means an attacker has to bypass the zone-based firewall, the host-level firewall, key-based SSH authentication, and hardware-key-protected web authentication before reaching anything useful.

@@ -242,3 +242,20 @@ Keuze werd Optie 3 (hybrid). Redeneringen:
 De HEAD-fixes zijn doorgevoerd: het IP is vervangen door een placeholder, het absoluut pad is verplaatst naar het gitignored bestand `CLAUDE.local.md`, en de werkgever-referenties zijn herschreven naar neutrale formuleringen. De hooks zijn uitgebreid met detectie van absolute filesystem-paden om herhaling te voorkomen.
 
 Open: als de repo significant groeit in visibility (forks, sterren), heroverweeg Optie 2 als gecontroleerde cleanup met expliciete commit-policy-exception.
+
+## Eigen homelab CA boven self-signed certificaten
+
+**Datum:** 2026-04-12
+**Gebied:** TLS, certificaatbeheer
+
+Proxmox VE genereert bij installatie een self-signed certificaat met de hostname van de node als CN. Toen WebAuthn-registratie van een YubiKey vereiste dat de PVE web UI via een hostname benaderd werd in plaats van een IP-adres, ontstond een kettingreactie: het self-signed cert had de verkeerde CN, Firefox vertrouwde het niet via de macOS system keychain (omdat `security.enterprise_roots.enabled` alleen CA-certificaten importeert, niet individuele end-entity certs), en Chrome vertrouwde het wel maar dat loste het Firefox-probleem niet op.
+
+Drie opties lagen er:
+
+1. **Per service een self-signed cert met correcte SAN.** Werkt in Chrome en Safari via de system keychain, maar niet in Firefox zonder handmatige security exceptions per site
+2. **Certs handmatig importeren in Firefox.** Werkt, maar schaalt niet naar meerdere services en moet bij elke cert-vernieuwing herhaald worden
+3. **Eigen CA aanmaken en alle service-certs daarmee ondertekenen.** De CA gaat eenmalig in de macOS system keychain, waarna alle browsers (inclusief Firefox via enterprise_roots) elk cert dat ermee ondertekend is automatisch vertrouwen
+
+Optie 3 werd de keuze. De `JacOps Homelab CA` is een RSA 4096-bit root CA met `basicConstraints: CA:TRUE, pathlen:0` en een geldigheid van tien jaar. De private key is AES256-encrypted en opgeslagen in `~/.homelab-ca/` op de Mac (chmod 700). Service-certs zijn RSA 2048-bit met twee jaar geldigheid.
+
+De directe winst is dat elke nieuwe service (Vaultwarden/Caddy, Forgejo, PBS, Miniflux) een cert krijgt dat in alle browsers vertrouwd is zonder extra stappen. De CA key verhuist naar Vaultwarden zodra die draait, zodat het secret niet op een onversleuteld filesystem blijft staan.

@@ -162,3 +162,27 @@ In Uptime Kuma v1.x, a public status page could be protected with a simple passw
 I planned to run two status pages: one public with curated monitors, one internal with everything behind a password. The second page is no longer possible without external tools. Cloudflare Access would work for a browser, but it breaks native apps that cannot handle the Access login redirect, and the ntfy iOS app is one of them. For the homelab, the internal status page became "the admin dashboard after login", which is functionally the same thing minus a custom page layout.
 
 **Takeaway:** before planning a feature, verify it still exists in the version you are running. Major version bumps quietly drop features more often than changelogs advertise. For Uptime Kuma specifically, v2 is a substantial rewrite and several v1 conveniences are gone.
+
+## WebAuthn does not work with IP addresses as Relying Party ID
+
+The Proxmox VE Auto-fill for WebAuthn Settings populates the node IP address as the RP ID and Origin. That is technically correct from PVE's perspective, but the WebAuthn spec and most browser implementations require a domain name as RP ID. The result was a non-descriptive error: `failed to begin webauthn context instantiation: The configuration was invalid`.
+
+The fix was to set up local DNS records via the UniFi gateway (Client Devices > device > IP Settings > Local DNS Record) and update the PVE WebAuthn Settings with the hostname as RP ID and Origin.
+
+**Takeaway:** always access services via hostname, not IP. Set up local DNS as the first step on a new cluster, before starting any 2FA configuration. The error message from PVE does not point to the cause, which makes debugging harder than it needs to be.
+
+## Firefox enterprise_roots does not import self-signed end-entity certs
+
+`security.enterprise_roots.enabled = true` in Firefox only imports certificates with the CA basic constraint from the macOS system keychain. Individual self-signed certs without the CA flag are ignored, even when added via `sudo security add-trusted-cert -d -r trustRoot`. Chrome and Safari trust these certs directly through the system keychain.
+
+The result was that a self-signed cert for PVE worked in Chrome but not in Firefox, despite the cert being listed as trusted in the system keychain.
+
+**Takeaway:** for multi-browser certificate trust on macOS, a homelab CA is the right approach. The CA has the CA basic constraint, gets imported by Firefox via enterprise_roots, and every cert signed by it is automatically trusted across all browsers.
+
+## macOS passkey handler intercepts Firefox WebAuthn with hardware keys
+
+Firefox on macOS delegates WebAuthn by default to the macOS passkey handler (`security.webauthn.enable_macos_passkeys = true` in `about:config`). That handler first shows a "Save a passkey?" dialog for iCloud Keychain. After "More Options" and "Security Key", the hardware key should be reachable, but in practice the macOS handler did not recognize the YubiKey touch. Chrome, which uses its own WebAuthn implementation, worked immediately.
+
+The fix was setting `security.webauthn.enable_macos_passkeys` to `false`. Firefox then uses its own FIDO2/WebAuthn handler that communicates directly with the key via USB HID, without the macOS intermediary.
+
+**Takeaway:** set this preference to `false` in Firefox if you use a hardware security key. The macOS passkey handler is designed for iCloud Keychain passkeys and does not work reliably with USB security keys in Firefox.

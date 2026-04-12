@@ -242,3 +242,20 @@ Option 3 (hybrid) was chosen. Reasoning:
 HEAD fixes applied: the IP was replaced with a placeholder, the absolute path was moved to the gitignored `CLAUDE.local.md`, and the employer references were rewritten to neutral wording. Hooks were extended with absolute-path detection to prevent recurrence.
 
 Open: if the repo grows significantly in visibility (forks, stars), reconsider Option 2 as a controlled cleanup with an explicit commit-policy exception.
+
+## Homelab CA over self-signed certificates
+
+**Date:** 2026-04-12
+**Area:** TLS, certificate management
+
+Proxmox VE generates a self-signed certificate at install time using the node hostname as CN. When WebAuthn registration of a YubiKey required the PVE web UI to be accessed via a hostname instead of an IP address, a chain reaction followed: the self-signed cert had the wrong CN, Firefox did not trust it via the macOS system keychain (because `security.enterprise_roots.enabled` only imports CA certificates, not individual end-entity certs), and Chrome trusted it but that did not solve the Firefox problem.
+
+Three options were considered:
+
+1. **Per-service self-signed cert with correct SAN.** Works in Chrome and Safari via the system keychain, but not in Firefox without manual security exceptions per site
+2. **Manually import certs into Firefox.** Works, but does not scale to multiple services and needs repeating on every cert renewal
+3. **Create a homelab CA and sign all service certs with it.** The CA goes into the macOS system keychain once, after which all browsers (including Firefox via enterprise_roots) automatically trust every cert signed by it
+
+Option 3 was chosen. The `JacOps Homelab CA` is an RSA 4096-bit root CA with `basicConstraints: CA:TRUE, pathlen:0` and a ten-year validity period. The private key is AES256-encrypted and stored in `~/.homelab-ca/` on the Mac (chmod 700). Service certs are RSA 2048-bit with two-year validity.
+
+The immediate benefit is that every new service (Vaultwarden/Caddy, Forgejo, PBS, Miniflux) gets a cert that is trusted in all browsers without extra steps. The CA key will move to Vaultwarden once it is deployed, so the secret does not remain on an unencrypted filesystem.

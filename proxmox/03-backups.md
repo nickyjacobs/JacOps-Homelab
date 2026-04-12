@@ -94,7 +94,7 @@ The core of the setup is two jobs that together resolve the circular dependency.
 
 **Job 1: `weekly-backup`**
 
-This job covers everything except PBS itself. Sunday 03:00, snapshot mode, zstd compression, four weeks retention. Target: PBS. Scope: all VMs and containers with VM 180 explicitly excluded.
+This job covers everything except PBS itself. Sunday 03:00, snapshot mode, zstd compression. Target: PBS. Scope: all VMs and containers with VM 180 explicitly excluded. Retention is not enforced by this job but by the PBS-side prune job (see Datastore maintenance), so that the `pve-sync@pbs` service account only needs `DatastoreBackup` permissions and not `Datastore.Prune`.
 
 ```
 vzdump: weekly-backup
@@ -105,7 +105,6 @@ vzdump: weekly-backup
     mailnotification failure
     mode snapshot
     notes-template {{guestname}}
-    prune-backups keep-weekly=4
     storage pbs-main
     all 1
 ```
@@ -145,7 +144,7 @@ In addition, `verify-new=true` is set on the datastore, which means PBS verifies
 
 The GC job uses PBS's own two-phase algorithm: it first marks all chunks still in use, then removes the unmarked ones. The job can run while backups are in progress. It is a safe operation that does not need to coordinate with the Job 1 / Job 2 run schedules.
 
-Prune retention is deliberately a bit wider than the `keep-weekly=4` in Job 1. PBS-side prune uses `keep-last 2, keep-weekly 4, keep-monthly 3`. That means recent backups stick around longer, weekly backups follow the vzdump retention, and monthly backups provide a longer timeline. The three layers together barely cost any extra disk because most older monthly backups dedupe almost completely against the newer ones.
+Retention is handled entirely by this PBS-side prune job, not by the PVE backup job. The `pve-sync@pbs` service account only has `DatastoreBackup` permissions and no `Datastore.Prune`. This follows the principle of least privilege: the backup client can write data, but retention decisions are made by PBS itself. The combination `keep-last 2, keep-weekly 4, keep-monthly 3` ensures recent backups stick around longer and monthly backups provide a longer timeline. The layers together barely cost any extra disk because most older monthly backups dedupe almost completely against the newer ones.
 
 ## First test run
 
