@@ -1,6 +1,6 @@
 # Zone-based firewall
 
-🇳🇱 Nederlands | 🇬🇧 [English](03-zone-firewall.md)
+🇬🇧 [English](03-zone-firewall.md) | 🇳🇱 Nederlands
 
 Dit document beschrijft hoe de VLANs uit [02-vlan-segmentation.nl.md](02-vlan-segmentation.nl.md) zijn gegroepeerd in zones, en welk verkeer de zonegrenzen mag oversteken.
 

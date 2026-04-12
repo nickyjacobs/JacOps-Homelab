@@ -57,7 +57,7 @@ Both templates use placeholders. Replace the bracketed values before importing i
 ```ini
 [Interface]
 PrivateKey = <CLIENT_PRIVATE_KEY>
-Address = 10.0.90.2/32
+Address = 10.0.90.<client-1>/32
 DNS = 10.0.10.1
 
 [Peer]
@@ -75,7 +75,7 @@ The `AllowedIPs` list on a split tunnel client only contains the internal subnet
 ```ini
 [Interface]
 PrivateKey = <CLIENT_PRIVATE_KEY>
-Address = 10.0.90.3/32
+Address = 10.0.90.<client-2>/32
 DNS = 10.0.10.1
 
 [Peer]

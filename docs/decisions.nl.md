@@ -217,3 +217,28 @@ Voor tien monitors beantwoordt het eigen dashboard van Uptime Kuma de vraag die 
 Prometheus wordt nuttig zodra er meerdere databronnen zijn om te combineren. Zodra Wazuh komt na de eJPT-certificering, is er data van defensieve tools om tegen beschikbaarheid en performance-metrics af te zetten. Grafana als één scherm over Uptime Kuma, Wazuh, Proxmox node-exporter en n8n begint op dat punt zichzelf terug te verdienen.
 
 Uptime Kuma heeft al een eigen `/metrics` endpoint in Prometheus-formaat, dus het migratiepad is schoon. Geen verhuizing, geen herschrijving, alleen een nieuw scrape-target.
+
+## Audit Round 1: git history met BLOCKER-content accepteren (Optie 3 hybrid)
+
+**Datum:** 2026-04-12
+**Gebied:** Security, git hygiene
+
+Bij de eerste volledige audit van de repo werden drie BLOCKERs gevonden in HEAD: een concreet host-IP in lessons-learned dat niet als placeholder was geschreven, een absoluut filesystem-pad in CLAUDE.md dat de lokale mappenstructuur onthulde, en werkgever-referenties in de roadmap. Alle drie zitten ook in git history (commits `361f433`, `7033ebc`, `e2ca3a6`) die al naar `origin/main` zijn gepushed.
+
+Drie opties lagen er:
+
+1. **Accept history, fix HEAD only.** Gaat niet mee met history rewrite. HEAD is schoon, commits behouden de leak in hun diff
+2. **Filter-repo + force-push.** Schoont history, maar breekt de commit-policy no-force-push regel, breekt eventuele clones, en GitHub cached commit views blijven maandenlang bestaan via SHA-URL's
+3. **Hybrid: fix HEAD nu, history-beslissing later.** Combineert de acute fix met uitstel van de destructieve operatie
+
+Keuze werd Optie 3 (hybrid). Redeneringen:
+
+- De commit-policy is een zelfopgelegde harde regel. Die breken vereist een bewuste, gedocumenteerde uitzondering, niet een audit-bijproduct
+- De repo is nieuw, waarschijnlijk nul forks of clones, dus de praktische impact van de history-leak is minimaal
+- De BLOCKERs zijn al publiek geweest sinds de push. Een paar uur meer of minder exposure verandert niks aan het risico
+- HEAD-fix voorkomt verdere verspreiding bij nieuwe clones of scrapes
+- Filter-repo kan later alsnog als bewuste, separate cleanup-actie worden uitgevoerd
+
+De HEAD-fixes zijn doorgevoerd: het IP is vervangen door een placeholder, het absoluut pad is verplaatst naar het gitignored bestand `CLAUDE.local.md`, en de werkgever-referenties zijn herschreven naar neutrale formuleringen. De hooks zijn uitgebreid met detectie van absolute filesystem-paden om herhaling te voorkomen.
+
+Open: als de repo significant groeit in visibility (forks, sterren), heroverweeg Optie 2 als gecontroleerde cleanup met expliciete commit-policy-exception.

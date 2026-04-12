@@ -1,6 +1,6 @@
 # Cybersecurity hardening
 
-🇳🇱 Nederlands | 🇬🇧 [English](05-cybersecurity-hardening.md)
+🇬🇧 [English](05-cybersecurity-hardening.md) | 🇳🇱 Nederlands
 
 De vorige documenten beschrijven de structurele controls: [VLAN-segmentatie](02-vlan-segmentation.nl.md), [zone-based firewallregels](03-zone-firewall.nl.md) en de [WireGuard VPN](04-wireguard-vpn.nl.md) voor remote toegang. Dit document behandelt de defensieve lagen daarbovenop. Op zichzelf is elke laag goedkoop en in isolatie zinloos. Opgestapeld verhogen ze de prijs van een geslaagde inbraak tot voorbij wat een doorsnee opportunistische aanvaller wil betalen.
 

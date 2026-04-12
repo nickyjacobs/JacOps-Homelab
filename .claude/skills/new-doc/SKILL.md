@@ -81,7 +81,11 @@ En de Engelse pendant in `<sectie>/README.md`.
 
 ### 8. Update de root-README status-tabel
 
-`README.md` en `README.nl.md` op repo root hebben een Status-sectie met regels per onderwerp. Voeg een rij toe als de nieuwe doc een nieuw onderwerp introduceert. Anders update je de bestaande rij.
+`README.md` en `README.nl.md` op repo root hebben een Status-sectie met regels per onderwerp.
+
+**Regel: voeg altijd een nieuwe rij toe per nieuwe NN-doc.** De status-tabel groeit één-op-één met de docs. Werk beide README's bij (NL en EN) in dezelfde stap.
+
+Uitzondering: als de nieuwe doc een bestaand onderwerp uitbreidt (bijvoorbeeld een sub-pagina van iets dat al een rij heeft), bespreek dat eerst met Nicky voordat je een rij toevoegt. Default is altijd: nieuwe rij.
 
 ### 9. Meld het resultaat
 

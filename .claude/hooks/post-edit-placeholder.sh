@@ -48,9 +48,10 @@ with open("$file_path", 'r') as f:
 hits = []
 
 # Zelfde patterns als pre-edit-secret-scan.sh
+# Concrete host-IPs, exclusief .0 (subnet), .1/.254 (gateway-conventie)
 for m in re.finditer(r'\b10\.0\.\d+\.(\d+)\b', text):
     last_octet = int(m.group(1))
-    if last_octet not in (1, 254):
+    if last_octet not in (0, 1, 254):
         hits.append(('CONCRETE_IP', m.group(0), 'Vervang door <node-ip> of <ct-ip>'))
 
 for m in re.finditer(r'\b([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b', text):
@@ -78,6 +79,10 @@ for m in re.finditer(r'-----BEGIN (RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----', te
 for m in re.finditer(r'/root/[a-zA-Z0-9_.-]+\.(txt|key|pem|token|secret)', text):
     hits.append(('ROOT_TOKEN_PATH', m.group(0), 'Verwijs naar Vaultwarden bij naam'))
 
+# Hex-strings >40 chars (mogelijk hash/token)
+# Note: Docker image digests (sha256:abc...) kunnen false positives geven. De
+# whitelist-heuristiek zoekt naar 'commit|hash|sha' in dezelfde tekst om die te
+# dekken. Voor Docker digests: voeg 'digest' of 'sha256:' toe aan de context.
 for m in re.finditer(r'\b[a-fA-F0-9]{40,}\b', text):
     val = m.group(0)
     if len(val) == 40 and re.search(r'(commit|hash|sha)\b.*' + re.escape(val[:8]), text, re.IGNORECASE):
@@ -86,6 +91,10 @@ for m in re.finditer(r'\b[a-fA-F0-9]{40,}\b', text):
 
 for m in re.finditer(r'\b[A-Za-z0-9+/]{43}=', text):
     hits.append(('WG_KEY', m.group(0)[:20] + '...', 'WireGuard key, vervang door <wireguard-privkey>'))
+
+# Absolute /Users/ paden (macOS username + filesystem leak)
+for m in re.finditer(r'/Users/[a-zA-Z0-9_.-]+/', text):
+    hits.append(('USER_PATH', m.group(0), 'Vervang door ~/ of <local-path>'))
 
 for tag, snippet, suggestion in hits:
     print(f'[{tag}] {snippet}')

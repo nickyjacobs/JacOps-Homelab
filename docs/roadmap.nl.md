@@ -106,7 +106,7 @@ YubiKey 5C NFC als primaire 2FA, aparte hardware-factor van Vaultwarden's YubiKe
 
 **Keeper**
 
-Blijft in gebruik voor werk-specifieke credentials, PQR-scope alleen. Geen persoonlijke of homelab-items meer in Keeper, zodat de lock-in beperkt is tot wat er toch al binnen de PQR-contractgrens valt.
+Blijft in gebruik voor een beperkte werkcontext, buiten scope van deze repo. Geen persoonlijke of homelab-items meer in Keeper, zodat de lock-in beperkt blijft tot wat binnen de werkcontext toch al vastligt.
 
 **TryHackMe Premium + HTB Starting Point**
 
@@ -129,11 +129,11 @@ Examendatum is 15 of 16 mei 2026. De sprint loopt vanaf 11 april, dus ongeveer 3
 
 ## Fase 3: Na eJPT, vanaf 17 mei 2026
 
-Blue team en red team tooling gaat vanaf 17 mei in gebruik, met Velociraptor voorop omdat die directe transferwaarde geeft naar het SOC-werk waar Rapid7 al Velociraptor in zijn Insight-platform gebruikt.
+Blue team en red team tooling gaat vanaf 17 mei in gebruik, met Velociraptor voorop omdat die directe transferwaarde geeft naar SOC-werk in het algemeen, en naar Rapid7-gebaseerde omgevingen in het bijzonder.
 
 | # | Service | Plaats | Reden |
 |---|---------|--------|-------|
-| 1 | Velociraptor | Server als LXC plus agents op doellab | Rapid7-acquired, VQL leren, directe PQR-transferwaarde |
+| 1 | Velociraptor | Server als LXC plus agents op doellab | Open source DFIR-agent, Rapid7-acquired, VQL leren, directe transferwaarde naar SOC-werk |
 | 2 | Wazuh (lichte vorm, 4 GB RAM) | LXC of VM | Alternatieve SIEM naast Rapid7, SCA, FIM, vulnerability-scanning |
 | 3 | MISP | LXC | Threat intel platform met community feeds |
 | 4 | DFIR-IRIS | LXC | Case management, vervanger voor TheHive 5 sinds die commercieel werd |

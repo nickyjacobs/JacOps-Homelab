@@ -1,6 +1,6 @@
 # WireGuard VPN
 
-🇳🇱 Nederlands | 🇬🇧 [English](04-wireguard-vpn.md)
+🇬🇧 [English](04-wireguard-vpn.md) | 🇳🇱 Nederlands
 
 Dit document behandelt het remote access-pad naar de homelab. De [zone-based firewall](03-zone-firewall.nl.md) houdt het verkeer tussen VLANs aan de LAN-kant onder controle. WireGuard trekt dat model door naar remote clients, zonder een management interface naar het publieke internet te openen.
 
@@ -57,7 +57,7 @@ Beide templates gebruiken placeholders. Vervang de waarden tussen haken voordat 
 ```ini
 [Interface]
 PrivateKey = <CLIENT_PRIVATE_KEY>
-Address = 10.0.90.2/32
+Address = 10.0.90.<client-1>/32
 DNS = 10.0.10.1
 
 [Peer]
@@ -75,7 +75,7 @@ De `AllowedIPs`-lijst van een split tunnel client bevat alleen de interne subnet
 ```ini
 [Interface]
 PrivateKey = <CLIENT_PRIVATE_KEY>
-Address = 10.0.90.3/32
+Address = 10.0.90.<client-2>/32
 DNS = 10.0.10.1
 
 [Peer]

@@ -1,6 +1,6 @@
 # VLAN-segmentatie
 
-🇳🇱 Nederlands | 🇬🇧 [English](02-vlan-segmentation.md)
+🇬🇧 [English](02-vlan-segmentation.md) | 🇳🇱 Nederlands
 
 Dit document zet de logische lagen uit [01-architecture.nl.md](01-architecture.nl.md) om naar echte VLANs, subnets en switchport-profielen.
 

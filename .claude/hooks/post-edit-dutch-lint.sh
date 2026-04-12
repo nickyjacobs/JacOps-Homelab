@@ -45,13 +45,13 @@ em_dash_pattern='—'
 
 issues_found=0
 
-if grep -nE "$buzzwoorden_pattern" "$file_path" > /tmp/dutch-lint-hits 2>/dev/null; then
+if grep -niE "$buzzwoorden_pattern" "$file_path" > /tmp/dutch-lint-hits 2>/dev/null; then
     echo "[dutch-lint] AI-buzzwoorden in $file_path:" >&2
     head -5 /tmp/dutch-lint-hits >&2
     issues_found=1
 fi
 
-if grep -nE "$connectoren_pattern" "$file_path" > /tmp/dutch-lint-hits 2>/dev/null; then
+if grep -niE "$connectoren_pattern" "$file_path" > /tmp/dutch-lint-hits 2>/dev/null; then
     echo "[dutch-lint] Verboden connectoren in $file_path:" >&2
     head -5 /tmp/dutch-lint-hits >&2
     issues_found=1

@@ -217,3 +217,28 @@ For ten monitors, Uptime Kuma's own dashboard answers the question that matters:
 Prometheus becomes worthwhile when there are multiple data sources to correlate. Once Wazuh comes in after the eJPT certification, there will be defensive-tool data to cross-reference with availability and performance metrics. Grafana as a single pane over Uptime Kuma, Wazuh, Proxmox node-exporter and n8n starts to earn its keep at that point.
 
 Uptime Kuma already exposes a native `/metrics` endpoint in Prometheus format, so the upgrade path is clean. No migration, no rewrite, just a new scrape target.
+
+## Audit Round 1: accept git history with BLOCKER content (Option 3 hybrid)
+
+**Date:** 2026-04-12
+**Area:** Security, git hygiene
+
+The first full audit of the repo found three BLOCKERs in HEAD: a concrete host IP in lessons-learned that was not written as a placeholder, an absolute filesystem path in CLAUDE.md that revealed the local directory layout, and employer references in the roadmap. All three also live in git history (commits `361f433`, `7033ebc`, `e2ca3a6`) already pushed to `origin/main`.
+
+Three options were considered:
+
+1. **Accept history, fix HEAD only.** No history rewrite. HEAD is clean, commits retain the leak in their diff
+2. **Filter-repo plus force-push.** Cleans history, but breaks the commit-policy no-force-push rule, breaks potential clones, and GitHub cached commit views persist for months via SHA URLs
+3. **Hybrid: fix HEAD now, defer history decision.** Combines the acute fix with deferral of the destructive operation
+
+Option 3 (hybrid) was chosen. Reasoning:
+
+- The commit-policy is a self-imposed hard rule. Breaking it requires a deliberate, documented exception, not an audit side-effect
+- The repo is new, likely zero forks or clones, so the practical impact of the history leak is minimal
+- The BLOCKERs have been public since the push. A few more hours of exposure does not change the risk profile
+- The HEAD fix prevents further spread to new clones or scrapers
+- Filter-repo can still be applied later as a deliberate, separate cleanup action
+
+HEAD fixes applied: the IP was replaced with a placeholder, the absolute path was moved to the gitignored `CLAUDE.local.md`, and the employer references were rewritten to neutral wording. Hooks were extended with absolute-path detection to prevent recurrence.
+
+Open: if the repo grows significantly in visibility (forks, stars), reconsider Option 2 as a controlled cleanup with an explicit commit-policy exception.

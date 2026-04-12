@@ -123,8 +123,8 @@ That is exactly the right behaviour. A changed host key could be a legitimate re
 The fix is `ssh-keygen -R <hostname-or-ip>` to remove the old entry, followed by a new `ssh-copy-id` attempt that accepts the new host key and installs the public key.
 
 ```
-ssh-keygen -R 10.0.10.180
-ssh-copy-id root@10.0.10.180
+ssh-keygen -R 10.0.10.<pbs-ip>
+ssh-copy-id root@10.0.10.<pbs-ip>
 ```
 
 **Takeaway:** on every reinstall of a host reached through key-based auth, `ssh-keygen -R` is the first step before trying to connect again. This belongs in a mental checklist for post-reinstall operations, alongside "note new cert fingerprint" and "verify first successful login".

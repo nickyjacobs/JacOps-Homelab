@@ -64,10 +64,10 @@ import os, re
 text = os.environ.get('SCAN_CONTENT', '')
 hits = []
 
-# 1. Concrete host-IPs in 10.0.x.0/24, exclusief .1 en .254 (gateway-conventies)
+# 1. Concrete host-IPs in 10.0.x.0/24, exclusief .0 (subnet), .1/.254 (gateway)
 for m in re.finditer(r'\b10\.0\.\d+\.(\d+)\b', text):
     last_octet = int(m.group(1))
-    if last_octet not in (1, 254):
+    if last_octet not in (0, 1, 254):
         hits.append(('CONCRETE_IP', m.group(0), 'Vervang door <node-ip> of <ct-ip>'))
 
 # 2. Volledige MAC-adressen (geen XX-mask)
@@ -104,6 +104,10 @@ for m in re.finditer(r'/root/[a-zA-Z0-9_.-]+\.(txt|key|pem|token|secret)', text)
     hits.append(('ROOT_TOKEN_PATH', m.group(0), 'Verwijs naar Vaultwarden in plaats van /root/-pad'))
 
 # 10. Hex-strings >40 chars (mogelijk hash/token, vraagt context)
+# Note: Docker image digests (sha256:abc...) kunnen hier false positives geven.
+# De whitelist-heuristiek onder (zoeken naar 'commit|hash|sha' in dezelfde tekst)
+# dekt commit hashes. Voor Docker digests: voeg 'digest' of 'sha256:' toe in de
+# omringende tekst om ze te whitelisten.
 for m in re.finditer(r'\b[a-fA-F0-9]{40,}\b', text):
     val = m.group(0)
     # Whitelist git commit hashes (40 char exact, vaak na woord 'commit')
@@ -114,6 +118,10 @@ for m in re.finditer(r'\b[a-fA-F0-9]{40,}\b', text):
 # 11. WireGuard private keys (44-char base64 met = einde)
 for m in re.finditer(r'\b[A-Za-z0-9+/]{43}=', text):
     hits.append(('WG_KEY', m.group(0)[:20] + '...', 'WireGuard key vervang door <wireguard-privkey>'))
+
+# 12. Absolute /Users/ paden (macOS username + filesystem leak)
+for m in re.finditer(r'/Users/[a-zA-Z0-9_.-]+/', text):
+    hits.append(('USER_PATH', m.group(0), 'Vervang door ~/ of <local-path>'))
 
 for tag, snippet, suggestion in hits:
     print(f'[{tag}] {snippet}')

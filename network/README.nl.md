@@ -1,6 +1,6 @@
 # Netwerk
 
-🇳🇱 Nederlands | 🇬🇧 [English](README.md)
+🇬🇧 [English](README.md) | 🇳🇱 Nederlands
 
 Documentatie van de netwerklaag van de homelab. Gebouwd op drie principes: segmenteer op doel, deny by default, verifieer wat je toestaat.
 

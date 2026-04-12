@@ -106,7 +106,7 @@ YubiKey 5C NFC as primary 2FA, a hardware factor separate from Vaultwarden's Yub
 
 **Keeper**
 
-Stays in use for work-specific credentials, PQR scope only. No personal or homelab items remain in Keeper, so the lock-in is limited to what falls inside the PQR contract boundary anyway.
+Stays in use for a limited work context, out of scope for this repo. No personal or homelab items remain in Keeper, so the lock-in stays limited to what already sits inside the work context.
 
 **TryHackMe Premium + HTB Starting Point**
 
@@ -129,11 +129,11 @@ The exam is on 15 or 16 May 2026. The sprint runs from 11 April, roughly 34 days
 
 ## Phase 3: after eJPT, from 17 May 2026
 
-Blue team and red team tooling comes online from 17 May, with Velociraptor first because it offers direct transfer value to SOC work where Rapid7 already uses Velociraptor inside its Insight platform.
+Blue team and red team tooling comes online from 17 May, with Velociraptor first because it offers direct transfer value to SOC work in general, and to Rapid7-based environments specifically.
 
 | # | Service | Location | Reason |
 |---|---------|----------|--------|
-| 1 | Velociraptor | Server as LXC plus agents on target lab | Rapid7-acquired, learn VQL, direct PQR transfer value |
+| 1 | Velociraptor | Server as LXC plus agents on target lab | Open source DFIR agent, Rapid7-acquired, learn VQL, direct transfer value to SOC work |
 | 2 | Wazuh (lightweight, 4 GB RAM) | LXC or VM | Alternative SIEM alongside Rapid7, SCA, FIM, vulnerability scanning |
 | 3 | MISP | LXC | Threat intel platform with community feeds |
 | 4 | DFIR-IRIS | LXC | Case management, replacement for TheHive 5 after it went commercial |

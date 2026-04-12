@@ -44,7 +44,7 @@ if [[ -z "$target" ]]; then
 elif [[ -d "$target" ]]; then
     while IFS= read -r f; do
         files+=("$f")
-    done < <(find "$target" -name '*.md' -not -path './.git/*' -not -path './archives/*' -not -path './docs/sessions/*')
+    done < <(find "$target" -name '*.md' -not -path './.git/*' -not -path './archives/*' -not -path './docs/sessions/*' -not -path './.claude/*')
 elif [[ -f "$target" ]]; then
     files+=("$target")
 else
@@ -85,7 +85,8 @@ hits = []
 
 for m in re.finditer(r'\b10\.0\.\d+\.(\d+)\b', text):
     last_octet = int(m.group(1))
-    if last_octet not in (1, 254):
+    # .0 = subnet-notatie, .1/.254 = gateway-conventie — alle drie toegestaan
+    if last_octet not in (0, 1, 254):
         hits.append(('CONCRETE_IP', m.group(0)))
 
 for m in re.finditer(r'\b([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b', text):
@@ -112,6 +113,9 @@ for m in re.finditer(r'/root/[a-zA-Z0-9_.-]+\.(txt|key|pem|token|secret)', text)
 
 for m in re.finditer(r'\b[A-Za-z0-9+/]{43}=', text):
     hits.append(('WG_KEY', m.group(0)[:20] + '...'))
+
+for m in re.finditer(r'/Users/[a-zA-Z0-9_.-]+/', text):
+    hits.append(('USER_PATH', m.group(0)))
 
 for tag, val in hits:
     print(f'  [{tag}] {val}')
@@ -182,13 +186,13 @@ for f in "${md_files[@]}"; do
 
     file_hits=0
 
-    if grep -nE '\b(cruciaal|essentieel|baanbrekend|holistisch|toonaangevend|geoptimaliseerd|naadloos|moeiteloos)\b' "$f" > /tmp/validate-hits 2>/dev/null; then
+    if grep -niE '\b(cruciaal|essentieel|baanbrekend|holistisch|toonaangevend|geoptimaliseerd|naadloos|moeiteloos)\b' "$f" > /tmp/validate-hits 2>/dev/null; then
         echo "  WARN: $f bevat AI-buzzwoorden:"
         head -3 /tmp/validate-hits | sed 's/^/    /'
         file_hits=1
     fi
 
-    if grep -nE '\b(bovendien|echter|tevens|desalniettemin|derhalve|voorts)\b' "$f" > /tmp/validate-hits 2>/dev/null; then
+    if grep -niE '\b(bovendien|echter|tevens|desalniettemin|derhalve|voorts)\b' "$f" > /tmp/validate-hits 2>/dev/null; then
         echo "  WARN: $f bevat verboden connectoren:"
         head -3 /tmp/validate-hits | sed 's/^/    /'
         file_hits=1

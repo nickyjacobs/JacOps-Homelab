@@ -123,8 +123,8 @@ Dat is precies het juiste gedrag. Een gewijzigde host-key kan een legitieme rein
 De fix is `ssh-keygen -R <hostname-or-ip>` om de oude entry te verwijderen, gevolgd door een nieuwe `ssh-copy-id`-poging die de nieuwe host-key accepteert en de public key installeert.
 
 ```
-ssh-keygen -R 10.0.10.180
-ssh-copy-id root@10.0.10.180
+ssh-keygen -R 10.0.10.<pbs-ip>
+ssh-copy-id root@10.0.10.<pbs-ip>
 ```
 
 **Les:** bij elke reinstall van een host die via key-auth benaderd wordt, is `ssh-keygen -R` de eerste stap voordat je weer probeert te verbinden. Dit hoort in een mental-checklist voor post-reinstall operaties, naast "nieuwe cert fingerprint noteren" en "eerste succesvolle login verifieren".
