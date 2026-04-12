@@ -62,6 +62,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | n8n service documented | Done |
 | Uptime Kuma service documented | Done |
 | ntfy service documented | Done |
+| Vaultwarden password vault documented | Done |
 
 ## About JacOps
 

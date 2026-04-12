@@ -62,6 +62,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | n8n service gedocumenteerd | Klaar |
 | Uptime Kuma service gedocumenteerd | Klaar |
 | ntfy service gedocumenteerd | Klaar |
+| Vaultwarden password vault gedocumenteerd | Klaar |
 
 ## Over JacOps
 

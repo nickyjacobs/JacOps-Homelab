@@ -48,17 +48,17 @@ Eight services together form the foundation layer that all future work builds on
 
 VM 180 `pbs-01` on Node 1. Two vCPUs, 4 GB RAM, 32 GB OS disk on the NVMe thin pool, 500 GB datastore as a qcow2 on the SATA directory. Dedicated service account `pve-sync@pbs` with an API token plus `DatastoreBackup` ACL scoped to `/datastore/main`. Two backup jobs together resolve the circular dependency: `weekly-backup` for all VMs and containers to PBS (Sunday 03:00, four weeks retention, VM 180 excluded) and `pbs-self-backup` for VM 180 only to the old SATA directory (Monday 04:00, two weeks retention). Datastore maintenance runs in a Sunday window shortly after the backup: garbage collection 05:00, prune 05:30, verify 06:00. Full writeup in [03-backups.md](../proxmox/03-backups.md).
 
-### Coming up (order binding)
-
 **2. Vaultwarden**
 
-CT 162 on Node 1, Debian 12 base, one core, 512 MB RAM, 5 GB rootfs on the NVMe thin pool. Docker compose with pinned versions, bound to `127.0.0.1:8222`, Caddy as reverse proxy on the same LXC with a self-signed certificate. Internal-only through `vault.jacops.local`, only reachable through WireGuard or the local network. Admin token as an Argon2 hash in env vars, `SIGNUPS_ALLOWED=false`, `INVITATIONS_ALLOWED=false`, `DISABLE_ICON_DOWNLOAD=true` as an SSRF mitigation, `PASSWORD_ITERATIONS=600000` for extra KDF cost.
+CT 152 on Node 1, Debian 13 base, one core, 512 MB RAM, 5 GB rootfs on the NVMe thin pool. Docker compose with Vaultwarden 1.35.4 and Caddy 2.11.2-alpine, both pinned to tag plus SHA256 digest. Caddy as reverse proxy on the same LXC with a certificate signed by the homelab CA. Internal-only through `vault.jacops.local`, only reachable through WireGuard or the local network. Admin token as an Argon2id hash in env vars, `SIGNUPS_ALLOWED=false`, `INVITATIONS_ALLOWED=false`, `DISABLE_ICON_DOWNLOAD=true` as an SSRF mitigation, `PASSWORD_ITERATIONS=600000` for extra KDF cost.
 
-Two-factor through the YubiKey 5C NFC as primary factor once the device arrives. TOTP as backup through a second authorized factor. Master password as a six-word diceware passphrase of at least twenty characters.
+Two-factor through the YubiKey 5C NFC as passkey (primary) and 2FAS Auth as TOTP backup. Master password as a diceware passphrase of at least twenty characters.
 
-Datastore backups follow two paths: daily through `restic` to PBS, and weekly as encrypted tar through `age` to an external Backblaze B2 bucket. Renovate or a manual update cycle monitors new Vaultwarden releases and keeps the container within a week of every security patch.
+Datastore backups run through the weekly PBS backup job. Two additional paths are planned: daily through `restic` to PBS, and weekly as encrypted tar through `age` to an external Backblaze B2 bucket. Renovate or a manual update cycle monitors new Vaultwarden releases and keeps the container within a week of every security patch.
 
-This service comes first because every new deploy from that moment generates credentials that can go straight into the vault. Without Vaultwarden those credentials land in `/root/*-token.txt` files or on paper notes until the vault arrives, and that in-between state should not last for weeks.
+Full documentation in [services/04-vaultwarden.md](../services/04-vaultwarden.md).
+
+### Coming up (order binding)
 
 **3. Forgejo v11 LTS**
 

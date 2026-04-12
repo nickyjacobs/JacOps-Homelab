@@ -48,17 +48,17 @@ Acht services vormen samen de foundation-laag waar alle toekomstige werk op steu
 
 VM 180 `pbs-01` op Node 1. Twee vCPU, 4 GB RAM, 32 GB OS-disk op de NVMe thin pool, 500 GB datastore als qcow2 op de SATA-directory. Dedicated service-account `pve-sync@pbs` met API-token plus `DatastoreBackup`-ACL scoped tot `/datastore/main`. Twee backup-jobs die samen de circular dependency wegwerken: `weekly-backup` voor alle VMs en containers naar PBS (zondag 03:00, vier weken retentie, VM 180 uitgesloten) en `pbs-self-backup` voor alleen VM 180 naar de oude SATA-directory (maandag 04:00, twee weken retentie). Datastore-onderhoud draait in een zondag-venster kort na de backup: garbage collection 05:00, prune 05:30, verify 06:00. Volledige uitleg in [03-backups.nl.md](../proxmox/03-backups.nl.md).
 
-### Komend (volgorde bindend)
-
 **2. Vaultwarden**
 
-CT 162 op Node 1, Debian 12 base, één core, 512 MB RAM, 5 GB rootfs op de NVMe thin pool. Docker compose met gepinde versie, bind op `127.0.0.1:8222`, Caddy als reverse proxy op dezelfde LXC met self-signed certificaat. Intern-only via `vault.jacops.local`, alleen bereikbaar via WireGuard of het lokale netwerk. Admin token als Argon2-hash in de env vars, `SIGNUPS_ALLOWED=false`, `INVITATIONS_ALLOWED=false`, `DISABLE_ICON_DOWNLOAD=true` als mitigatie tegen SSRF, `PASSWORD_ITERATIONS=600000` voor extra KDF-kosten.
+CT 152 op Node 1, Debian 13 base, een core, 512 MB RAM, 5 GB rootfs op de NVMe thin pool. Docker compose met Vaultwarden 1.35.4 en Caddy 2.11.2-alpine, beide gepind op tag plus SHA256 digest. Caddy als reverse proxy op dezelfde LXC met een certificaat ondertekend door de homelab CA. Intern-only via `vault.jacops.local`, alleen bereikbaar via WireGuard of het lokale netwerk. Admin token als Argon2id-hash in de env vars, `SIGNUPS_ALLOWED=false`, `INVITATIONS_ALLOWED=false`, `DISABLE_ICON_DOWNLOAD=true` als mitigatie tegen SSRF, `PASSWORD_ITERATIONS=600000` voor extra KDF-kosten.
 
-Tweefactor via YubiKey 5C NFC als primaire factor zodra het apparaat binnen is. TOTP als backup via een tweede geautoriseerde factor. Master password als zes-woord diceware passphrase van minimaal twintig karakters.
+Tweefactor via YubiKey 5C NFC als passkey (primair) en 2FAS Auth als TOTP-backup. Master password als diceware passphrase van minimaal twintig karakters.
 
-Backups van de datastore lopen via twee paden: dagelijks via `restic` naar PBS, en wekelijks als encrypted tar via `age` naar een externe Backblaze B2 bucket. Renovate of een handmatige update-cyclus monitort nieuwe Vaultwarden releases en houdt de container binnen een week na elke security-patch bij.
+Backups van de datastore lopen via de wekelijkse PBS backup job. Twee extra paden staan gepland: dagelijks via `restic` naar PBS, en wekelijks als encrypted tar via `age` naar een externe Backblaze B2 bucket. Renovate of een handmatige update-cyclus monitort nieuwe Vaultwarden releases en houdt de container binnen een week na elke security-patch bij.
 
-Deze service staat vooraan in de volgorde omdat elke nieuwe deploy vanaf dat moment credentials genereert die direct naar de vault kunnen. Zonder Vaultwarden landen die credentials in `/root/*-token.txt`-files of op papier tot de vault er is, en die tussentoestand willen we niet weken laten bestaan.
+Volledige documentatie in [services/04-vaultwarden.nl.md](../services/04-vaultwarden.nl.md).
+
+### Komend (volgorde bindend)
 
 **3. Forgejo v11 LTS**
 

@@ -11,6 +11,7 @@ Self-hosted services die in het homelab draaien. Elke service draait in een eige
 | [01-n8n.nl.md](01-n8n.nl.md) | n8n workflowautomatisering | Draait |
 | [02-uptime-kuma.nl.md](02-uptime-kuma.nl.md) | Uptime Kuma monitoring | Draait |
 | [03-ntfy.nl.md](03-ntfy.nl.md) | ntfy self-hosted pushmeldingen | Draait |
+| [04-vaultwarden.nl.md](04-vaultwarden.nl.md) | Vaultwarden password vault | Draait |
 
 ## Gepland
 
