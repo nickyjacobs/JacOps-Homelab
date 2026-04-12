@@ -16,6 +16,7 @@ jacops-homelab/
 ├── LICENSE                            # MIT
 ├── network/                           # Netwerk-architectuur, VLAN, firewall, WireGuard
 ├── proxmox/                           # Cluster setup, hardening, backups, storage, networking
+├── hardware/                          # Cross-cutting fysieke apparatuur: YubiKey
 ├── services/                          # Per service: n8n, Uptime Kuma, ntfy
 ├── docs/                              # Roadmap, decisions, lessons-learned, sessions
 ├── assets/                            # Diagrammen, screenshots, hero images

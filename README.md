@@ -24,6 +24,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 |---------|-------------|
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM hygiene, monitoring |
+| [hardware/](hardware/) | Physical equipment: YubiKey hardware 2FA |
 | [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Design decisions and lessons learned |
 

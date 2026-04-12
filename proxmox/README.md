@@ -15,4 +15,3 @@ Two-node Proxmox VE cluster running virtual machines and containers for the home
 | [05-networking.md](05-networking.md) | VLAN-aware bridge, tagged sub-interfaces, firewall layers, corosync traffic, troubleshooting |
 | [06-vm-hygiene.md](06-vm-hygiene.md) | Naming, tags, guest agent, protection, boot order, review and deprovisioning |
 | [07-monitoring.md](07-monitoring.md) | Reachability versus host metrics, alerting path, Beszel roadmap, known gaps |
-| [08-yubikey.md](08-yubikey.md) | YubiKey 5C NFC as hardware 2FA, WebAuthn on PVE, homelab CA, Firefox settings |

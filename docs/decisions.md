@@ -259,3 +259,17 @@ Three options were considered:
 Option 3 was chosen. The `JacOps Homelab CA` is an RSA 4096-bit root CA with `basicConstraints: CA:TRUE, pathlen:0` and a ten-year validity period. The private key is AES256-encrypted and stored in `~/.homelab-ca/` on the Mac (chmod 700). Service certs are RSA 2048-bit with two-year validity.
 
 The immediate benefit is that every new service (Vaultwarden/Caddy, Forgejo, PBS, Miniflux) gets a cert that is trusted in all browsers without extra steps. The CA key will move to Vaultwarden once it is deployed, so the secret does not remain on an unencrypted filesystem.
+
+## Top-level hardware directory for cross-cutting equipment
+
+**Date:** 2026-04-12
+**Area:** Repository structure
+
+The YubiKey 5C NFC documentation was initially placed in `proxmox/` as number 08. On reflection that is not right: the YubiKey is not a Proxmox-specific topic. It is used with PVE, but will also be used with Vaultwarden, Forgejo, Bitwarden cloud and potentially SSH. That makes it a cross-cutting hardware item that does not belong under a single category.
+
+Two options were considered:
+
+1. **Keep it in `proxmox/`.** Quick, no structural change, but misleading. Readers looking for the YubiKey doc would not check the Proxmox section first
+2. **New top-level directory `hardware/`.** Dedicated category for physical equipment that spans multiple sections. Follows the same pattern as `network/`, `proxmox/` and `services/`
+
+Option 2 was chosen. The YubiKey is the first item as `hardware/01-yubikey`. The directory scales to future hardware documentation if needed, without requiring another structural change.

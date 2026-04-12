@@ -15,4 +15,3 @@ Twee-node Proxmox VE cluster dat virtual machines en containers draait voor het 
 | [05-networking.nl.md](05-networking.nl.md) | VLAN-aware bridge, tagged sub-interfaces, firewall-lagen, corosync-verkeer, troubleshooting |
 | [06-vm-hygiene.nl.md](06-vm-hygiene.nl.md) | Naamgeving, tags, guest agent, protection, boot-order, review en deprovisioning |
 | [07-monitoring.nl.md](07-monitoring.nl.md) | Reachability versus host metrics, alerting-pad, Beszel-roadmap, bekende gaten |
-| [08-yubikey.nl.md](08-yubikey.nl.md) | YubiKey 5C NFC als hardware 2FA, WebAuthn bij PVE, homelab CA, Firefox-instellingen |

@@ -24,6 +24,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 |--------|--------------|
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM-hygiene, monitoring |
+| [hardware/](hardware/) | Fysieke apparatuur: YubiKey hardware 2FA |
 | [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy |
 | [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
