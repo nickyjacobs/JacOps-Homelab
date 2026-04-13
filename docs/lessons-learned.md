@@ -186,3 +186,35 @@ Firefox on macOS delegates WebAuthn by default to the macOS passkey handler (`se
 The fix was setting `security.webauthn.enable_macos_passkeys` to `false`. Firefox then uses its own FIDO2/WebAuthn handler that communicates directly with the key via USB HID, without the macOS intermediary.
 
 **Takeaway:** set this preference to `false` in Firefox if you use a hardware security key. The macOS passkey handler is designed for iCloud Keychain passkeys and does not work reliably with USB security keys in Firefox.
+
+## Docker containers in LXC do not trust the host CA
+
+The homelab CA was trusted in the system store of CT 161 (the Forgejo Runner LXC). But Docker containers that the runner starts for CI jobs are isolated: they have their own `/etc/ssl/certs/` and know nothing about the host CA. The `actions/checkout` step failed with `server certificate verification failed` when cloning the repo via HTTPS from Forgejo.
+
+The fix is two volume mounts in the runner config:
+
+- Mount the homelab CA cert as `/etc/ssl/certs/homelab-ca.crt` in the container
+- Mount the full host CA bundle (`/etc/ssl/certs/ca-certificates.crt`, which includes the homelab CA after `update-ca-certificates`) to replace the container bundle
+
+Additionally, set `NODE_EXTRA_CA_CERTS` as an environment variable so Node.js (which the checkout action runs on) adds the homelab CA to its trust list.
+
+**Takeaway:** each layer of isolation has its own cert store. The LXC host, Docker container and the application inside the container can each trust a different set of CAs. With self-signed or private CA setups, the CA must be made available at every layer separately.
+
+## SSL_CERT_FILE replaces the entire CA store
+
+When configuring TLS trust for the Forgejo Runner, I set `SSL_CERT_FILE` to the path of the homelab CA cert. The idea was that tools would read this file and trust the CA. What I did not expect: `SSL_CERT_FILE` replaces the entire CA store. Every application that reads this variable (curl, git, lychee, and most other tools) then trusts only the CAs in that file. Public CAs like those for shields.io, LinkedIn and other external sites were no longer trusted.
+
+The fix was removing `SSL_CERT_FILE` and using `NODE_EXTRA_CA_CERTS` instead. That variable is Node.js-specific and adds the CA to the existing list rather than replacing it. For non-Node tools, the mounted `ca-certificates.crt` bundle that already contains the homelab CA does the job.
+
+**Takeaway:** `SSL_CERT_FILE` is an override, not an addition. Only use it when you want to replace the entire bundle. For adding a single CA to an existing trust store, better options exist: `NODE_EXTRA_CA_CERTS` for Node.js, or adding the CA to the system bundle via `update-ca-certificates` and mounting that bundle.
+
+## GitHub Action wrappers are not always compatible with Forgejo Actions
+
+Forgejo Actions is compatible with the GitHub Actions workflow format, but that does not automatically extend to the actions themselves. Two out of two tested actions failed:
+
+- `gitleaks/gitleaks-action@v2` requires a paid license outside GitHub. On GitHub it works for free on public repos through a special integration. On Forgejo it is treated as a standalone action and demands a license key
+- `lycheeverse/lychee-action@v2` downloads the lychee binary but the path is not correctly passed through in the act runner. The binary exists but is not discoverable via PATH
+
+The fix was installing the tools as CLI binaries directly in the workflow instead of using the action wrappers. Both tools are free and open source; the wrappers only add convenience that does not work outside GitHub.
+
+**Takeaway:** test every GitHub Action you migrate to Forgejo individually. Composite actions and actions that call GitHub-specific APIs (code scanning, annotations, issue creation) are the most likely breaking points. CLI-based workflows are more portable than action-based workflows.
