@@ -68,13 +68,19 @@ Debian 13 in plaats van de geplande Debian 12 omdat alleen die template beschikb
 
 Volledige documentatie in [services/05-forgejo.nl.md](../services/05-forgejo.nl.md).
 
-### Komend (volgorde bindend)
-
 **4. Forgejo Runner**
 
-CT 161 op Node 2, Debian 12 base, twee cores, 2 GB RAM, 15 GB rootfs op de NVMe thin pool. LXC features `keyctl=1,nesting=1` om Docker in LXC werkend te krijgen. `act_runner` binary, geregistreerd bij de Forgejo-instance uit stap 3. Eerste workload: een schaduwrun van `weekly_refresh.yml` naast de bestaande GitHub Actions, totdat vier succesvolle runs bewijzen dat de migratie betrouwbaar is. Daarna disabled de GitHub Actions kant.
+CT 161 op Node 2, Debian 13 base, twee cores, 2 GB RAM, 15 GB rootfs op de NVMe thin pool. LXC features `keyctl=1,nesting=1` voor Docker-in-LXC. Docker CE 29.4.0 en forgejo-runner v12.8.2 als systemd service met sandbox directives. Dedicated `forgejo-runner` service-gebruiker met Docker-groep lidmaatschap.
 
-Runner draait op Node 2 in plaats van Node 1 om de workload te spreiden. Docker-in-LXC heeft wat extra nesting-permissies nodig die we bewust beperkt houden tot deze ene LXC.
+Geregistreerd als `homelab-runner` bij de Forgejo-instance op CT 160, met labels `ubuntu-latest`, `ubuntu-22.04` en `debian-latest`. Twee Forgejo-specifieke workflows in `.forgejo/workflows/` draaien als shadow-run naast de bestaande GitHub Actions: gitleaks (secret scanning) en lychee (link checking). De Forgejo-versies gebruiken CLI tools direct omdat de GitHub action wrappers niet compatibel zijn met de Forgejo runner (gitleaks vereist een betaalde licentie, lychee heeft PATH-problemen).
+
+De homelab CA is vertrouwd in de container en wordt via volume mounts beschikbaar gemaakt in Docker job containers. `NODE_EXTRA_CA_CERTS` zorgt dat de checkout action de repository via HTTPS kan klonen. Actions is ingeschakeld in Forgejo's app.ini met `DEFAULT_ACTIONS_URL = https://github.com` zodat third-party actions direct resolven.
+
+Debian 13 in plaats van de geplande Debian 12 voor consistentie met de Forgejo-container. Runner draait op Node 2 in plaats van Node 1 om de workload te spreiden.
+
+Volledige documentatie in [services/06-forgejo-runner.nl.md](../services/06-forgejo-runner.nl.md).
+
+### Komend (volgorde bindend)
 
 **5. Miniflux**
 
@@ -180,3 +186,4 @@ Het plan is in deze sessie drie keer aangepast:
 2. Na een kritische validatie-ronde met drie nieuwe agents op foundation services, eJPT stack en LiteLLM specifiek zijn LiteLLM, Apprise en Changedetection.io geschrapt en is de eJPT stack flink ingekort.
 3. Tijdens de deploy-sessie van 2026-04-11 is PBS volledig geinstalleerd en zijn Vaultwarden en Forgejo van volgorde gewisseld, zodat credentials direct in een vault landen in plaats van tijdelijk op hosts.
 4. Tijdens de deploy-sessie van 2026-04-13 is Forgejo v11.0.12 LTS gedeployed op CT 160 met security-hardening (systemd sandbox, SSRF-beperking, git hooks uit). Debian 13 in plaats van Debian 12 wegens template-beschikbaarheid.
+5. Tijdens de avondsessie van 2026-04-13 is de Forgejo Runner gedeployed op CT 161 (Node 2). Docker CE en forgejo-runner v12.8.2 met twee shadow-run workflows (gitleaks, lychee). Actions ingeschakeld in Forgejo. Debian 13 voor consistentie.

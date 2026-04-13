@@ -6,7 +6,7 @@ Forgejo is de self-hosted Git-forge van het homelab. Alle code, configuratie en 
 
 ## Waarom Forgejo
 
-Het homelab genereert bij elke nieuwe service configuratiebestanden, compose files, scripts en documentatie. Zonder een eigen Git-server leven die bestanden verspreid over hosts of alleen in een publieke GitHub-repo. Een eigen forge geeft versiebeheer voor alles wat niet publiek hoort te zijn. CI/CD via Forgejo Actions volgt zodra de runner (CT 161) gedeployed is.
+Het homelab genereert bij elke nieuwe service configuratiebestanden, compose files, scripts en documentatie. Zonder een eigen Git-server leven die bestanden verspreid over hosts of alleen in een publieke GitHub-repo. Een eigen forge geeft versiebeheer voor alles wat niet publiek hoort te zijn. CI/CD via Forgejo Actions draait op de [Forgejo Runner](06-forgejo-runner.nl.md) (CT 161).
 
 Forgejo is een community-fork van Gitea, gelicenseerd onder GPL. De v11 LTS-lijn krijgt support tot juli 2026. De keuze voor Forgejo boven Gitea is de governance: Forgejo wordt beheerd door een stichting in plaats van een commercieel bedrijf, wat beter past bij een homelab dat niet afhankelijk wil zijn van licensing-wijzigingen.
 

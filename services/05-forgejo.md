@@ -6,7 +6,7 @@ Forgejo is the self-hosted Git forge for the homelab. All code, configuration an
 
 ## Why Forgejo
 
-The homelab generates configuration files, compose files, scripts and documentation with every new service. Without a dedicated Git server, those files live scattered across hosts or only in a public GitHub repo. A self-hosted forge provides version control for everything that should not be public. CI/CD via Forgejo Actions follows once the runner (CT 161) is deployed.
+The homelab generates configuration files, compose files, scripts and documentation with every new service. Without a dedicated Git server, those files live scattered across hosts or only in a public GitHub repo. A self-hosted forge provides version control for everything that should not be public. CI/CD via Forgejo Actions runs on the [Forgejo Runner](06-forgejo-runner.md) (CT 161).
 
 Forgejo is a community fork of Gitea, licensed under GPL. The v11 LTS line is supported until July 2026. Forgejo was chosen over Gitea for its governance model: it is managed by a foundation rather than a commercial entity, which better fits a homelab that wants to avoid dependency on licensing changes.
 

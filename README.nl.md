@@ -25,7 +25,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM-hygiene, monitoring |
 | [hardware/](hardware/) | Fysieke apparatuur: YubiKey hardware 2FA |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner |
 | [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
 ## Tech stack
@@ -64,6 +64,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | ntfy service gedocumenteerd | Klaar |
 | Vaultwarden password vault gedocumenteerd | Klaar |
 | Forgejo Git forge gedocumenteerd | Klaar |
+| Forgejo Runner CI/CD gedocumenteerd | Klaar |
 
 ## Over JacOps
 

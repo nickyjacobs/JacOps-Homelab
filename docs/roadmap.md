@@ -68,13 +68,19 @@ Debian 13 instead of the planned Debian 12 because only that template was availa
 
 Full documentation in [services/05-forgejo.md](../services/05-forgejo.md).
 
-### Coming up (order binding)
-
 **4. Forgejo Runner**
 
-CT 161 on Node 2, Debian 12 base, two cores, 2 GB RAM, 15 GB rootfs on the NVMe thin pool. LXC features `keyctl=1,nesting=1` to get Docker inside LXC working. `act_runner` binary, registered against the Forgejo instance from step 3. First workload: a shadow run of `weekly_refresh.yml` alongside the existing GitHub Actions, until four successful runs prove the migration is reliable. Then the GitHub Actions side is disabled.
+CT 161 on Node 2, Debian 13 base, two cores, 2 GB RAM, 15 GB rootfs on the NVMe thin pool. LXC features `keyctl=1,nesting=1` for Docker-in-LXC. Docker CE 29.4.0 and forgejo-runner v12.8.2 as a systemd service with sandbox directives. Dedicated `forgejo-runner` service user with Docker group membership.
 
-The runner lives on Node 2 instead of Node 1 to spread workload. Docker-in-LXC needs some extra nesting permissions, deliberately limited to this one LXC.
+Registered as `homelab-runner` with the Forgejo instance on CT 160, with labels `ubuntu-latest`, `ubuntu-22.04` and `debian-latest`. Two Forgejo-specific workflows in `.forgejo/workflows/` run as a shadow-run alongside the existing GitHub Actions: gitleaks (secret scanning) and lychee (link checking). The Forgejo versions use CLI tools directly because the GitHub action wrappers are not compatible with the Forgejo runner (gitleaks requires a paid license, lychee has PATH issues).
+
+The homelab CA is trusted in the container and made available to Docker job containers via volume mounts. `NODE_EXTRA_CA_CERTS` ensures the checkout action can clone the repository via HTTPS. Actions is enabled in Forgejo's app.ini with `DEFAULT_ACTIONS_URL = https://github.com` so that third-party actions resolve directly.
+
+Debian 13 instead of the planned Debian 12 for consistency with the Forgejo container. The runner lives on Node 2 instead of Node 1 to spread workload.
+
+Full documentation in [services/06-forgejo-runner.md](../services/06-forgejo-runner.md).
+
+### Coming up (order binding)
 
 **5. Miniflux**
 
@@ -180,3 +186,4 @@ The plan was adjusted three times during the 2026-04-11 session:
 2. After a critical validation round with three new agents on foundation services, eJPT stack and LiteLLM specifically, LiteLLM, Apprise and Changedetection.io were cut and the eJPT stack was shortened.
 3. During the deploy session of 2026-04-11, PBS was fully installed and Vaultwarden and Forgejo swapped order so that credentials land directly in a vault instead of temporarily on hosts.
 4. During the deploy session of 2026-04-13, Forgejo v11.0.12 LTS was deployed on CT 160 with security hardening (systemd sandbox, SSRF restriction, git hooks disabled). Debian 13 instead of Debian 12 due to template availability.
+5. During the evening session of 2026-04-13, the Forgejo Runner was deployed on CT 161 (Node 2). Docker CE and forgejo-runner v12.8.2 with two shadow-run workflows (gitleaks, lychee). Actions enabled in Forgejo. Debian 13 for consistency.
