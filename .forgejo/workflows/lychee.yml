@@ -1,0 +1,32 @@
+name: lychee
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install lychee
+        run: |
+          LYCHEE_VERSION="0.23.0"
+          curl -fsSL "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-x86_64-unknown-linux-gnu.tar.gz" \
+            -o lychee.tar.gz
+          tar -xzf lychee.tar.gz lychee
+          chmod +x lychee
+
+      - name: Run lychee
+        run: |
+          ./lychee \
+            --verbose \
+            --no-progress \
+            --max-concurrency 8 \
+            --accept 200,206,429,999 \
+            --exclude-path assets/ \
+            './**/*.md'
