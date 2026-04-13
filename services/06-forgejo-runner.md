@@ -115,14 +115,25 @@ The runner runs as a dedicated `forgejo-runner` user with membership in the `doc
 
 The runner registration is instance-wide, not per-repository. The runner only executes jobs that match its labels. Docker containers for jobs are ephemeral and cleaned up after completion.
 
+## Status: proof-of-concept
+
+The runner is operational and tested, but runs as a proof-of-concept. The workflows in `.forgejo/workflows/` only trigger on `workflow_dispatch` (manual), not on every push. Reason: this repo is public on GitHub and the GitHub Actions workflows already cover CI fully. Running the same checks automatically on Forgejo is redundant.
+
+The runner becomes production-relevant when:
+- Private repositories land in Forgejo (configs, scripts, compose files that should not be on GitHub)
+- Workflows are needed that interact with the cluster (deploy scripts, backup verification)
+- The GitHub dependency is deliberately reduced
+
 ## Workflows
 
-Two workflows run as a shadow-run alongside the existing GitHub Actions:
+Two workflows are available for manual execution:
 
 | Workflow | Purpose | Trigger |
 |----------|---------|---------|
-| `gitleaks.yml` | Secret scanning via gitleaks CLI | push, workflow_dispatch |
-| `lychee.yml` | Link checking via lychee CLI | push, schedule (Mon 07:00 UTC), workflow_dispatch |
+| `gitleaks.yml` | Secret scanning via gitleaks CLI | workflow_dispatch |
+| `lychee.yml` | Link checking via lychee CLI | workflow_dispatch |
+
+Trigger via the Forgejo web UI (Actions > workflow > "Run Workflow") or via the API.
 
 The Forgejo versions live in `.forgejo/workflows/` and use CLI tools directly instead of GitHub-specific action wrappers. The `.github/workflows/` versions remain unchanged and run on GitHub.
 
