@@ -58,15 +58,17 @@ Backups van de datastore lopen via de wekelijkse PBS backup job. Twee extra pade
 
 Volledige documentatie in [services/04-vaultwarden.nl.md](../services/04-vaultwarden.nl.md).
 
-### Komend (volgorde bindend)
-
 **3. Forgejo v11 LTS**
 
-CT 160 op Node 1, Debian 12 base, twee cores, 1 GB RAM, 20 GB rootfs op de SATA-directory. Binary install (geen Docker), SQLite database, systemd service. Caddy als reverse proxy op dezelfde LXC. Intern-only via `forgejo.jacops.local`, geen publieke Cloudflare tunnel. SSH-push op een niet-standaard poort om een conflict met de runner te vermijden. Eerste user `nicky` met admin-rechten, 2FA verplicht via YubiKey, registration disabled.
+CT 160 op Node 1, Debian 13 base, twee cores, 1 GB RAM, 20 GB rootfs op de SATA-directory. Binary install (Forgejo 11.0.12, geen Docker), SQLite database, systemd service met sandbox directives (NoNewPrivileges, ProtectSystem=strict, PrivateTmp, PrivateDevices). Caddy 2.11.2 als reverse proxy op dezelfde LXC met security headers (HSTS, X-Frame-Options, nosniff). Intern-only via `forgejo.jacops.local`, TLS via homelab CA. Ingebouwde SSH server op poort 2222 om een conflict met de runner te vermijden.
 
-Forgejo v11 LTS krijgt support tot juli 2026, waarna de overstap naar v13 LTS komt. Geen v10 of v12, want LTS wint van feature-releases voor een productie-repo.
+Security-hardening in app.ini: registratie uit, sign-in vereist voor alle pagina's, git hooks uitgeschakeld (RCE-mitigatie), SSRF-oppervlak beperkt (webhooks alleen private hosts, mirrors uit, packages uit, mailer uit). Admin-credentials direct in Vaultwarden opgeslagen. 2FA via YubiKey als WebAuthn passkey (primair) en 2FAS Auth als TOTP-backup.
 
-De admin-credentials uit de installatie komen direct in Vaultwarden (daarom deze volgorde).
+Debian 13 in plaats van de geplande Debian 12 omdat alleen die template beschikbaar was op de node. Forgejo is een Go binary en is distro-onafhankelijk. Nesting ingeschakeld voor systemd 257 in unprivileged LXC, niet voor Docker.
+
+Volledige documentatie in [services/05-forgejo.nl.md](../services/05-forgejo.nl.md).
+
+### Komend (volgorde bindend)
 
 **4. Forgejo Runner**
 
@@ -177,3 +179,4 @@ Het plan is in deze sessie drie keer aangepast:
 1. Na de eerste research-ronde met drie parallelle agents stond er een uitgebreide maar ongefilterde foundation layer plus een brede eJPT stack.
 2. Na een kritische validatie-ronde met drie nieuwe agents op foundation services, eJPT stack en LiteLLM specifiek zijn LiteLLM, Apprise en Changedetection.io geschrapt en is de eJPT stack flink ingekort.
 3. Tijdens de deploy-sessie van 2026-04-11 is PBS volledig geinstalleerd en zijn Vaultwarden en Forgejo van volgorde gewisseld, zodat credentials direct in een vault landen in plaats van tijdelijk op hosts.
+4. Tijdens de deploy-sessie van 2026-04-13 is Forgejo v11.0.12 LTS gedeployed op CT 160 met security-hardening (systemd sandbox, SSRF-beperking, git hooks uit). Debian 13 in plaats van Debian 12 wegens template-beschikbaarheid.

@@ -12,6 +12,7 @@ Self-hosted services running in the homelab. Each service runs in its own LXC co
 | [02-uptime-kuma.md](02-uptime-kuma.md) | Uptime Kuma monitoring | Running |
 | [03-ntfy.md](03-ntfy.md) | ntfy self-hosted push notifications | Running |
 | [04-vaultwarden.md](04-vaultwarden.md) | Vaultwarden password vault | Running |
+| [05-forgejo.md](05-forgejo.md) | Forgejo Git forge | Running |
 
 ## Planned
 

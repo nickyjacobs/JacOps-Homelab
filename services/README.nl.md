@@ -12,6 +12,7 @@ Self-hosted services die in het homelab draaien. Elke service draait in een eige
 | [02-uptime-kuma.nl.md](02-uptime-kuma.nl.md) | Uptime Kuma monitoring | Draait |
 | [03-ntfy.nl.md](03-ntfy.nl.md) | ntfy self-hosted pushmeldingen | Draait |
 | [04-vaultwarden.nl.md](04-vaultwarden.nl.md) | Vaultwarden password vault | Draait |
+| [05-forgejo.nl.md](05-forgejo.nl.md) | Forgejo Git forge | Draait |
 
 ## Gepland
 
