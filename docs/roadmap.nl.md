@@ -80,13 +80,19 @@ Debian 13 in plaats van de geplande Debian 12 voor consistentie met de Forgejo-c
 
 Volledige documentatie in [services/06-forgejo-runner.nl.md](../services/06-forgejo-runner.nl.md).
 
-### Komend (volgorde bindend)
-
 **5. Miniflux**
 
-CT 163 op Node 1, Debian 12 base, één core, 256 MB RAM, 3 GB rootfs op de NVMe thin pool. Docker compose met `miniflux/miniflux:2.2.x` en `postgres:16-alpine`, beide pinned op digest. Intern-only via `miniflux.jacops.local`.
+CT 163 op Node 1, Debian 13 base, een core, 512 MB RAM, 5 GB rootfs op de NVMe thin pool. Docker compose met `miniflux/miniflux:2.2.6`, `postgres:16-alpine` en `caddy:2.11.2-alpine`, alle drie gepind op tag plus SHA256 digest. Caddy als reverse proxy met homelab CA cert. Intern-only via `miniflux.jacops.local`.
 
-Initiele feed-lijst richt zich op security-bronnen: NVD JSON feed, CISA KEV feed, Rapid7 release notes, Microsoft MSRC, HashiCorp security advisories, Cloudflare security blog, Mandiant, CrowdStrike, Unit42, SANS ISC, plus de GitHub release-feeds voor de services die we zelf draaien (PBS, Forgejo, Vaultwarden, ntfy, Uptime Kuma, n8n). Een n8n-workflow polled de Miniflux API dagelijks en duwt nieuwe entries met hoge severity door naar een `/threat-intel`-note in Obsidian en als ntfy-alert naar de telefoon.
+Debian 13 in plaats van de geplande Debian 12 omdat alleen die template beschikbaar was. RAM opgehoogd van 256 MB naar 512 MB en disk van 3 GB naar 5 GB omdat Miniflux, PostgreSQL, Caddy en de Docker daemon samen meer overhead vragen. Zie [decisions.nl.md](decisions.nl.md) voor de onderbouwing.
+
+19 feeds verdeeld over drie categorieen. Threat Intel (7 feeds): SANS ISC, Microsoft Security Blog, Unit 42, CrowdStrike, Krebs on Security, The DFIR Report, BleepingComputer. Advisories (2 feeds): Debian Security Advisories (DSA) en PostgreSQL News. Releases (10 feeds): Vaultwarden, ntfy, Uptime Kuma, n8n, Miniflux, Caddy, Forgejo, Docker/Moby, Docker Compose en WireGuard. Feed-selectie op basis van signaal-ruisverhouding; Rapid7 en Cloudflare Blog zijn na evaluatie verwijderd wegens te veel marketing.
+
+ntfy integratie geconfigureerd met dedicated publish-token en intern endpoint. API key aangemaakt voor toekomstige n8n-koppeling. Uptime Kuma monitor op het `/healthcheck` endpoint.
+
+Volledige documentatie in [services/07-miniflux.nl.md](../services/07-miniflux.nl.md).
+
+### Komend (volgorde bindend)
 
 **6. Beszel hub plus agents**
 
@@ -187,3 +193,4 @@ Het plan is in deze sessie drie keer aangepast:
 3. Tijdens de deploy-sessie van 2026-04-11 is PBS volledig geinstalleerd en zijn Vaultwarden en Forgejo van volgorde gewisseld, zodat credentials direct in een vault landen in plaats van tijdelijk op hosts.
 4. Tijdens de deploy-sessie van 2026-04-13 is Forgejo v11.0.12 LTS gedeployed op CT 160 met security-hardening (systemd sandbox, SSRF-beperking, git hooks uit). Debian 13 in plaats van Debian 12 wegens template-beschikbaarheid.
 5. Tijdens de avondsessie van 2026-04-13 is de Forgejo Runner gedeployed op CT 161 (Node 2). Docker CE en forgejo-runner v12.8.2 met twee shadow-run workflows (gitleaks, lychee). Actions ingeschakeld in Forgejo. Debian 13 voor consistentie.
+6. Tijdens de sessie van 2026-04-14 is Miniflux v2.2.6 gedeployed op CT 163 (Node 1). Docker Compose met PostgreSQL 16 en Caddy. 19 feeds in drie categorieen. ntfy integratie en Uptime Kuma monitor. RAM en disk opgehoogd van roadmap-spec. Architectuurbeslissingen genomen: Traefik als standaard reverse proxy (vervangt Caddy), step-ca als interne ACME server (vervangt handmatige OpenSSL CA).

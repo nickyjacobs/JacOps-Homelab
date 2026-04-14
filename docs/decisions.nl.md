@@ -273,3 +273,46 @@ Twee opties lagen er:
 2. **Nieuwe top-level map `hardware/`.** Eigen categorie voor fysieke apparatuur die meerdere secties raakt. Volgt hetzelfde patroon als `network/`, `proxmox/` en `services/`
 
 Optie 2 werd de keuze. De YubiKey is het eerste item als `hardware/01-yubikey`. De map schaalt naar toekomstige hardware-documentatie als die relevant wordt, zonder dat er opnieuw een structuurwijziging nodig is.
+
+## Miniflux container specs opgehoogd van roadmap
+
+**Datum:** 2026-04-14
+**Gebied:** Resource-planning
+
+De roadmap specificeerde 256 MB RAM en 3 GB disk voor Miniflux (CT 163). Tijdens de deploy bleek dat te krap. Miniflux, PostgreSQL 16, Caddy en de Docker daemon samen vragen meer dan 256 MB aan overhead, zelfs als de applicaties zelf maar ~74 MB idle gebruiken. Docker daemon alleen neemt al 80-120 MB. De 3 GB disk raakt vol door drie Docker images (~400-500 MB samen) plus PostgreSQL data en Docker overlay.
+
+Beide zijn opgehoogd naar de waardes die Vaultwarden (CT 152) ook gebruikt: 512 MB RAM met 256 MB swap, en 5 GB rootfs op de NVMe thin pool. In de praktijk zit de idle footprint rond 74 MB (Caddy 10 MB, Miniflux 24 MB, Postgres 40 MB), ruim binnen de 512 MB grens, met headroom voor feed polling pieken.
+
+## Traefik als standaard reverse proxy, Caddy vervangen
+
+**Datum:** 2026-04-14
+**Gebied:** Reverse proxy, infrastructuur
+
+Drie reverse proxy opties lagen er: Caddy (al in gebruik bij Vaultwarden, Forgejo, Miniflux), Traefik en Nginx Proxy Manager.
+
+Nginx Proxy Manager viel af op basis van een recente CORS CVE in de huidige versie (token theft via JWT interception, CVE-2025-50579), het ontbreken van Infrastructure-as-Code (config niet versioneerbaar of auditeerbaar), een dubbel attack surface (Node.js GUI plus C-based Nginx), en MariaDB als extra dependency.
+
+Caddy en Traefik zijn beide Go-based en memory-safe. Caddy heeft superieure TLS defaults (automatische HTTPS, ingebouwde OCSP stapling, eigen CA/ACME server). Traefik heeft native Docker service discovery via labels, kan Docker en file providers simultaan draaien (gebouwd voor een mix van Docker en native LXC services), en schaalt naar honderden services zonder config-overhead.
+
+Traefik werd de keuze. De doorslag gaf de mixed setup van het homelab: sommige services draaien als Docker containers, andere als native binaries in LXC. Traefik's provider-model handelt beide af zonder plugins of workarounds. Bij drie bestaande Caddy configs is nu het goedkoopste moment om te migreren. De steilere leercurve weegt niet op tegen de operationele voordelen op termijn.
+
+De migratie betreft Vaultwarden (CT 152), Forgejo (CT 160) en Miniflux (CT 163). Nieuwe services (Beszel, Dockge, en alles in Fase 3) worden direct op Traefik gebouwd.
+
+## step-ca als interne ACME server, handmatige OpenSSL CA vervangen
+
+**Datum:** 2026-04-14
+**Gebied:** PKI, certificaatbeheer
+
+De handmatige OpenSSL CA (RSA 4096 root, handmatige cert-generatie per service, twee jaar geldigheid) wordt vervangen door step-ca als interne ACME server met kortstondige certificaten.
+
+Drie problemen met de huidige aanpak rechtvaardigden de wissel:
+
+1. **Key compromise window.** Een gecompromitteerde service-key geeft een aanvaller twee jaar geldige impersonatie. Met step-ca's default van 24 uur (configureerbaar) krimpt dat venster naar een dag.
+2. **Operationele last.** Handmatige cert-vernieuwing schaalt niet. Bij twintig services zijn dat twintig handmatige OpenSSL sessies per twee jaar. step-ca vernieuwt automatisch via ACME.
+3. **Geen revocatie.** De handmatige CA heeft geen mechanisme om een gecompromitteerd cert in te trekken. step-ca lost dit passief op: kortstondige certs verlopen simpelweg.
+
+step-ca draait als eigen LXC met een two-tier PKI: de root key gaat offline (USB drive), de intermediate key op de YubiKey PIV slot (slot 9c, non-exportable). Signing vereist fysieke YubiKey plus PIN. Caddy en Traefik vragen certs aan via het standaard ACME protocol, exact zoals ze dat bij Let's Encrypt zouden doen.
+
+De bestaande homelab CA blijft vertrouwd in de macOS system keychain totdat alle services zijn gemigreerd. Daarna wordt de oude CA ingetrokken.
+
+Alternatieven die afvielen: Caddy's ingebouwde CA (gekoppeld aan Caddy's lifecycle, niet geschikt als centrale PKI), Let's Encrypt voor interne services (Certificate Transparency logs onthullen interne domeinnamen, externe dependency voor intern verkeer), en de handmatige CA behouden (suboptimaal voor een cybersecurity professional, niet conform de industrie-standaard van geautomatiseerde kortstondige certificaten).

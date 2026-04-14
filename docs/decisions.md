@@ -273,3 +273,46 @@ Two options were considered:
 2. **New top-level directory `hardware/`.** Dedicated category for physical equipment that spans multiple sections. Follows the same pattern as `network/`, `proxmox/` and `services/`
 
 Option 2 was chosen. The YubiKey is the first item as `hardware/01-yubikey`. The directory scales to future hardware documentation if needed, without requiring another structural change.
+
+## Miniflux container specs increased from roadmap
+
+**Date:** 2026-04-14
+**Area:** Resource planning
+
+The roadmap specified 256 MB RAM and 3 GB disk for Miniflux (CT 163). During deployment both proved too tight. Miniflux, PostgreSQL 16, Caddy and the Docker daemon together need more than 256 MB of overhead, even though the applications themselves only use ~74 MB idle. The Docker daemon alone takes 80-120 MB. The 3 GB disk fills up with three Docker images (~400-500 MB combined) plus PostgreSQL data and Docker overlay.
+
+Both were raised to match Vaultwarden (CT 152): 512 MB RAM with 256 MB swap, and 5 GB rootfs on the NVMe thin pool. In practice the idle footprint sits around 74 MB (Caddy 10 MB, Miniflux 24 MB, Postgres 40 MB), well within the 512 MB limit, with headroom for feed polling spikes.
+
+## Traefik as standard reverse proxy, replacing Caddy
+
+**Date:** 2026-04-14
+**Area:** Reverse proxy, infrastructure
+
+Three reverse proxy options were considered: Caddy (already in use on Vaultwarden, Forgejo, Miniflux), Traefik and Nginx Proxy Manager.
+
+Nginx Proxy Manager was ruled out based on a recent CORS CVE in the current version (token theft via JWT interception, CVE-2025-50579), the absence of Infrastructure-as-Code (config is not versionable or auditable), a dual attack surface (Node.js GUI plus C-based Nginx), and MariaDB as an extra dependency.
+
+Caddy and Traefik are both Go-based and memory-safe. Caddy has superior TLS defaults (automatic HTTPS, built-in OCSP stapling, own CA/ACME server). Traefik has native Docker service discovery via labels, can run Docker and file providers simultaneously (built for a mix of Docker and native LXC services), and scales to hundreds of services without config overhead.
+
+Traefik was chosen. The deciding factor was the mixed setup of the homelab: some services run as Docker containers, others as native binaries in LXC. Traefik's provider model handles both without plugins or workarounds. With only three existing Caddy configs, now is the cheapest time to migrate. The steeper learning curve does not outweigh the long-term operational benefits.
+
+The migration covers Vaultwarden (CT 152), Forgejo (CT 160) and Miniflux (CT 163). New services (Beszel, Dockge, and everything in Phase 3) will be built directly on Traefik.
+
+## step-ca as internal ACME server, replacing manual OpenSSL CA
+
+**Date:** 2026-04-14
+**Area:** PKI, certificate management
+
+The manual OpenSSL CA (RSA 4096 root, manual cert generation per service, two-year validity) is being replaced by step-ca as an internal ACME server with short-lived certificates.
+
+Three problems with the current approach justified the switch:
+
+1. **Key compromise window.** A compromised service key gives an attacker two years of valid impersonation. With step-ca's default of 24 hours (configurable), that window shrinks to a day.
+2. **Operational burden.** Manual cert renewal does not scale. At twenty services that means twenty manual OpenSSL sessions every two years. step-ca renews automatically via ACME.
+3. **No revocation.** The manual CA has no mechanism to revoke a compromised cert. step-ca solves this passively: short-lived certs simply expire.
+
+step-ca runs as its own LXC with a two-tier PKI: the root key goes offline (USB drive), the intermediate key on the YubiKey PIV slot (slot 9c, non-exportable). Signing requires physical YubiKey plus PIN. Caddy and Traefik request certs via the standard ACME protocol, exactly as they would with Let's Encrypt.
+
+The existing homelab CA remains trusted in the macOS system keychain until all services have been migrated. After that the old CA will be retired.
+
+Alternatives that were ruled out: Caddy's built-in CA (tied to Caddy's lifecycle, not suitable as centralised PKI), Let's Encrypt for internal services (Certificate Transparency logs reveal internal domain names, external dependency for internal traffic), and keeping the manual CA (suboptimal for a cybersecurity professional, not in line with the industry standard of automated short-lived certificates).

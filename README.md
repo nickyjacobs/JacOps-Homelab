@@ -25,7 +25,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM hygiene, monitoring |
 | [hardware/](hardware/) | Physical equipment: YubiKey hardware 2FA |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner, Miniflux |
 | [docs/](docs/) | Design decisions and lessons learned |
 
 ## Tech stack
@@ -65,6 +65,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Vaultwarden password vault documented | Done |
 | Forgejo Git forge documented | Done |
 | Forgejo Runner CI/CD documented | Done |
+| Miniflux RSS reader documented | Done |
 
 ## About JacOps
 

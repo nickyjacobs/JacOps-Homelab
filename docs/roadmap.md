@@ -80,13 +80,19 @@ Debian 13 instead of the planned Debian 12 for consistency with the Forgejo cont
 
 Full documentation in [services/06-forgejo-runner.md](../services/06-forgejo-runner.md).
 
-### Coming up (order binding)
-
 **5. Miniflux**
 
-CT 163 on Node 1, Debian 12 base, one core, 256 MB RAM, 3 GB rootfs on the NVMe thin pool. Docker compose with `miniflux/miniflux:2.2.x` and `postgres:16-alpine`, both pinned on digest. Internal-only through `miniflux.jacops.local`.
+CT 163 on Node 1, Debian 13 base, one core, 512 MB RAM, 5 GB rootfs on the NVMe thin pool. Docker compose with `miniflux/miniflux:2.2.6`, `postgres:16-alpine` and `caddy:2.11.2-alpine`, all three pinned on tag plus SHA256 digest. Caddy as reverse proxy with homelab CA cert. Internal-only through `miniflux.jacops.local`.
 
-Initial feed list focuses on security sources: NVD JSON feed, CISA KEV feed, Rapid7 release notes, Microsoft MSRC, HashiCorp security advisories, Cloudflare security blog, Mandiant, CrowdStrike, Unit42, SANS ISC, plus the GitHub release feeds for the services we run ourselves (PBS, Forgejo, Vaultwarden, ntfy, Uptime Kuma, n8n). An n8n workflow polls the Miniflux API daily and pushes high-severity new entries into a `/threat-intel` note in Obsidian and as a ntfy alert to the phone.
+Debian 13 instead of the planned Debian 12 because only that template was available. RAM increased from 256 MB to 512 MB and disk from 3 GB to 5 GB because Miniflux, PostgreSQL, Caddy and the Docker daemon together need more overhead. See [decisions.md](decisions.md) for the reasoning.
+
+19 feeds across three categories. Threat Intel (7 feeds): SANS ISC, Microsoft Security Blog, Unit 42, CrowdStrike, Krebs on Security, The DFIR Report, BleepingComputer. Advisories (2 feeds): Debian Security Advisories (DSA) and PostgreSQL News. Releases (10 feeds): Vaultwarden, ntfy, Uptime Kuma, n8n, Miniflux, Caddy, Forgejo, Docker/Moby, Docker Compose and WireGuard. Feed selection based on signal-to-noise ratio; Rapid7 and Cloudflare Blog were removed after evaluation due to excessive marketing.
+
+ntfy integration configured with a dedicated publish token and internal endpoint. API key created for future n8n integration. Uptime Kuma monitor on the `/healthcheck` endpoint.
+
+Full documentation in [services/07-miniflux.md](../services/07-miniflux.md).
+
+### Coming up (order binding)
 
 **6. Beszel hub plus agents**
 
@@ -187,3 +193,4 @@ The plan was adjusted three times during the 2026-04-11 session:
 3. During the deploy session of 2026-04-11, PBS was fully installed and Vaultwarden and Forgejo swapped order so that credentials land directly in a vault instead of temporarily on hosts.
 4. During the deploy session of 2026-04-13, Forgejo v11.0.12 LTS was deployed on CT 160 with security hardening (systemd sandbox, SSRF restriction, git hooks disabled). Debian 13 instead of Debian 12 due to template availability.
 5. During the evening session of 2026-04-13, the Forgejo Runner was deployed on CT 161 (Node 2). Docker CE and forgejo-runner v12.8.2 with two shadow-run workflows (gitleaks, lychee). Actions enabled in Forgejo. Debian 13 for consistency.
+6. During the session of 2026-04-14, Miniflux v2.2.6 was deployed on CT 163 (Node 1). Docker Compose with PostgreSQL 16 and Caddy. 19 feeds in three categories. ntfy integration and Uptime Kuma monitor. RAM and disk increased from roadmap spec. Architecture decisions made: Traefik as standard reverse proxy (replacing Caddy), step-ca as internal ACME server (replacing manual OpenSSL CA).
