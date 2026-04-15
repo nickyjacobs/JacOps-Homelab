@@ -92,7 +92,27 @@ ntfy integratie geconfigureerd met dedicated publish-token en intern endpoint. A
 
 Volledige documentatie in [services/07-miniflux.nl.md](../services/07-miniflux.nl.md).
 
+**6. step-ca**
+
+CT 164 op Node 1, Debian 13 base, een core, 512 MB RAM, 5 GB rootfs op de NVMe thin pool. step-ca v0.30.2 als interne ACME server met two-tier PKI. Root CA offline op USB-drive, intermediate CA als software key op de LXC (JWE-versleuteld). EC P-256 voor de hele chain. ACME provisioner met 72 uur default cert lifetime en tls-alpn-01 challenge.
+
+De oorspronkelijke beslissing specificeerde de intermediate key op YubiKey PIV slot 9c. Bij de implementatie bleek dit incompatibel met automatische ACME-certificaatuitgifte: de YubiKey zou 24/7 in de server moeten zitten en niet meer beschikbaar zijn voor WebAuthn. Software intermediate key is de standaard industrie-aanpak. Zie [decisions.nl.md](decisions.nl.md) voor de onderbouwing.
+
+Volledige documentatie in [services/08-step-ca.nl.md](../services/08-step-ca.nl.md).
+
+**7. Traefik**
+
+CT 165 op Node 1, Debian 13 base, een core, 512 MB RAM, 5 GB rootfs op de NVMe thin pool. Traefik v3.6.13 als centraal reverse proxy voor alle foundation services. Vervangt de per-LXC Caddy-setups op Vaultwarden (CT 152), Forgejo (CT 160) en Miniflux (CT 163).
+
+Automatische ACME-certificaten via step-ca met 72 uur lifetime. Globale security headers (HSTS, nosniff, frameDeny) op entrypoint-niveau. Dashboard beveiligd met basicAuth en IP allowlist. Backend verkeer is onversleuteld HTTP op hetzelfde VLAN, afgeschermd met iptables-regels per backend LXC (DOCKER-USER chain voor Docker services, INPUT chain voor native services).
+
+DNS-records voor alle geproxyde services (miniflux, forgejo, vault) wijzen via UniFi DNS policies naar het Traefik IP.
+
+Volledige documentatie in [services/09-traefik.nl.md](../services/09-traefik.nl.md).
+
 ### Komend (volgorde bindend)
+
+**8. Beszel hub plus agents** (was #6, hernummerd na step-ca en Traefik)
 
 **6. Beszel hub plus agents**
 
@@ -100,11 +120,11 @@ Hub in CT 151 naast de bestaande monitoring-stack, <50 MB RAM totaal voor hub en
 
 Uptime Kuma blijft reachability doen, Beszel voegt host-metrics toe (CPU, RAM, disk, netwerk). De twee overlappen niet.
 
-**7. Dockge**
+**9. Dockge**
 
 In CT 150 naast de bestaande n8n-compose-stack, <100 MB RAM. Compose-UI voor alle Docker-stacks die op dezelfde daemon draaien. Intern-only via `dockge.jacops.local`. Dit vervangt het handmatige `docker compose`-werk voor Vaultwarden, Miniflux en eventuele latere compose-based services.
 
-**8. ccusage**
+**10. ccusage**
 
 Op MacBook via `bun install -g ccusage`. Nul infra op het cluster. Leest Claude Code's eigen JSONL session-logs in `~/.claude/projects/` en toont per-sessie, per-dag en per-model kosten. Statusline-hook in `~/.claude/settings.json` geeft live budget-zicht tijdens werk.
 
@@ -194,3 +214,4 @@ Het plan is in deze sessie drie keer aangepast:
 4. Tijdens de deploy-sessie van 2026-04-13 is Forgejo v11.0.12 LTS gedeployed op CT 160 met security-hardening (systemd sandbox, SSRF-beperking, git hooks uit). Debian 13 in plaats van Debian 12 wegens template-beschikbaarheid.
 5. Tijdens de avondsessie van 2026-04-13 is de Forgejo Runner gedeployed op CT 161 (Node 2). Docker CE en forgejo-runner v12.8.2 met twee shadow-run workflows (gitleaks, lychee). Actions ingeschakeld in Forgejo. Debian 13 voor consistentie.
 6. Tijdens de sessie van 2026-04-14 is Miniflux v2.2.6 gedeployed op CT 163 (Node 1). Docker Compose met PostgreSQL 16 en Caddy. 19 feeds in drie categorieen. ntfy integratie en Uptime Kuma monitor. RAM en disk opgehoogd van roadmap-spec. Architectuurbeslissingen genomen: Traefik als standaard reverse proxy (vervangt Caddy), step-ca als interne ACME server (vervangt handmatige OpenSSL CA).
+7. Tijdens de sessie van 2026-04-15 zijn step-ca v0.30.2 (CT 164) en Traefik v3.6.13 (CT 165) gedeployed. Two-tier PKI met offline root key op USB en software intermediate key (YubiKey PIV afgevallen wegens incompatibiliteit met automatische ACME). Caddy verwijderd van CT 152, 160 en 163. Backend firewalling met iptables per LXC. Drie services gemigreerd naar centraal Traefik met automatische step-ca certificaten (72 uur lifetime).

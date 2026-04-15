@@ -40,7 +40,7 @@ The Proxmox cluster was already in good shape on the network and host-hardening 
 
 ## Phase 1: foundation deployments
 
-Eight services together form the foundation layer that all future work builds on. The order is binding: each deploy in this list protects or supports the next one.
+Ten services together form the foundation layer that all future work builds on. The order is binding: each deploy in this list protects or supports the next one.
 
 ### Done
 
@@ -92,19 +92,37 @@ ntfy integration configured with a dedicated publish token and internal endpoint
 
 Full documentation in [services/07-miniflux.md](../services/07-miniflux.md).
 
+**6. step-ca**
+
+CT 164 on Node 1, Debian 13 base, one core, 512 MB RAM, 5 GB rootfs on the NVMe thin pool. step-ca v0.30.2 as internal ACME server with two-tier PKI. Root CA offline on USB drive, intermediate CA as software key on the LXC (JWE-encrypted). EC P-256 for the entire chain. ACME provisioner with 72-hour default cert lifetime and tls-alpn-01 challenge.
+
+The original decision specified the intermediate key on YubiKey PIV slot 9c. During implementation this turned out to be incompatible with automatic ACME certificate issuance: the YubiKey would need to sit in the server 24/7 and would no longer be available for WebAuthn. Software intermediate key is the standard industry approach. See [decisions.md](decisions.md) for the reasoning.
+
+Full documentation in [services/08-step-ca.md](../services/08-step-ca.md).
+
+**7. Traefik**
+
+CT 165 on Node 1, Debian 13 base, one core, 512 MB RAM, 5 GB rootfs on the NVMe thin pool. Traefik v3.6.13 as central reverse proxy for all foundation services. Replaces the per-LXC Caddy setups on Vaultwarden (CT 152), Forgejo (CT 160) and Miniflux (CT 163).
+
+Automatic ACME certificates via step-ca with 72-hour lifetime. Global security headers (HSTS, nosniff, frameDeny) at the entrypoint level. Dashboard secured with basicAuth and IP allowlist. Backend traffic is unencrypted HTTP on the same VLAN, locked down with iptables rules per backend LXC (DOCKER-USER chain for Docker services, INPUT chain for native services).
+
+DNS records for all proxied services (miniflux, forgejo, vault) point to the Traefik IP via UniFi DNS policies.
+
+Full documentation in [services/09-traefik.md](../services/09-traefik.md).
+
 ### Coming up (order binding)
 
-**6. Beszel hub plus agents**
+**8. Beszel hub plus agents** (was #6, renumbered after step-ca and Traefik)
 
 Hub in CT 151 alongside the existing monitoring stack, under 50 MB RAM total for hub and all agents combined. Agents as a Go binary on both PVE nodes plus all new foundation LXCs. Internal-only through `beszel.jacops.local`.
 
 Uptime Kuma keeps doing reachability, Beszel adds host metrics (CPU, RAM, disk, network). The two do not overlap.
 
-**7. Dockge**
+**9. Dockge**
 
 In CT 150 alongside the existing n8n compose stack, under 100 MB RAM. Compose UI for all Docker stacks running on the same daemon. Internal-only through `dockge.jacops.local`. This replaces the manual `docker compose` work for Vaultwarden, Miniflux and any later compose-based service.
 
-**8. ccusage**
+**10. ccusage**
 
 On the MacBook through `bun install -g ccusage`. Zero infra on the cluster. Reads Claude Code's own JSONL session logs in `~/.claude/projects/` and shows per-session, per-day and per-model costs. Statusline hook in `~/.claude/settings.json` gives live budget visibility during work.
 
@@ -194,3 +212,4 @@ The plan was adjusted three times during the 2026-04-11 session:
 4. During the deploy session of 2026-04-13, Forgejo v11.0.12 LTS was deployed on CT 160 with security hardening (systemd sandbox, SSRF restriction, git hooks disabled). Debian 13 instead of Debian 12 due to template availability.
 5. During the evening session of 2026-04-13, the Forgejo Runner was deployed on CT 161 (Node 2). Docker CE and forgejo-runner v12.8.2 with two shadow-run workflows (gitleaks, lychee). Actions enabled in Forgejo. Debian 13 for consistency.
 6. During the session of 2026-04-14, Miniflux v2.2.6 was deployed on CT 163 (Node 1). Docker Compose with PostgreSQL 16 and Caddy. 19 feeds in three categories. ntfy integration and Uptime Kuma monitor. RAM and disk increased from roadmap spec. Architecture decisions made: Traefik as standard reverse proxy (replacing Caddy), step-ca as internal ACME server (replacing manual OpenSSL CA).
+7. During the session of 2026-04-15, step-ca v0.30.2 (CT 164) and Traefik v3.6.13 (CT 165) were deployed. Two-tier PKI with offline root key on USB and software intermediate key (YubiKey PIV dropped due to incompatibility with automatic ACME). Caddy removed from CT 152, 160 and 163. Backend firewalling with iptables per LXC. Three services migrated to central Traefik with automatic step-ca certificates (72-hour lifetime).

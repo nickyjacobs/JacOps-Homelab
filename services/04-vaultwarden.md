@@ -2,7 +2,7 @@
 
 🇬🇧 English | 🇳🇱 [Nederlands](04-vaultwarden.nl.md)
 
-Vaultwarden is the self-hosted password vault of the homelab. All credentials generated during a deploy end up here. It runs as a Docker stack in an LXC container behind Caddy as reverse proxy, accessible internally via `vault.jacops.local`.
+Vaultwarden is the self-hosted password vault of the homelab. All credentials generated during a deploy end up here. It runs as a Docker stack in an LXC container behind Traefik as central reverse proxy, accessible internally via `vault.jacops.local`.
 
 ## Why self-hosted
 
@@ -15,23 +15,21 @@ The choice for self-hosted over Bitwarden cloud is deliberately limited to homel
 ## Architecture
 
 ```
-Browser/App ─── HTTPS ──► Caddy (TLS termination) ──► Vaultwarden
-                          :443                        :8222
-                          CA cert                     Docker network only
+Browser/App ─── HTTPS ──► Traefik (CT 165)  ──► Vaultwarden (CT 152)
+                          :443                   :8222
+                          step-ca ACME certs     Traefik only
+                          Security headers       (iptables firewall)
 
                 LXC Container (CT 152)
-                ┌─────────────────────────────┐
-                │  Docker Compose             │
-                │  ├─ Caddy (port 443)        │
-                │  └─ Vaultwarden (port 8222) │
-                └─────────────────────────────┘
+                ┌──────────────────────────────────────┐
+                │  Docker Compose                      │
+                │  └─ Vaultwarden (port 8222)          │
+                └──────────────────────────────────────┘
                 VLAN 40 (Apps)
 ```
 
-Two containers run in a single Docker Compose stack:
-
-- **Vaultwarden** runs the vault engine and web UI. Binds on port 8222 within the Docker network, not on a host port. Only reachable via Caddy
-- **Caddy** handles TLS termination with a certificate signed by the [homelab CA](../hardware/01-yubikey.md). Proxies traffic to Vaultwarden and adds the `X-Real-IP` header
+- **Vaultwarden** runs the vault engine and web UI. Binds on port 8222 and is only reachable from the Traefik IP via an iptables rule in the `DOCKER-USER` chain
+- **Traefik** (CT 165) handles TLS termination with automatic certificates from step-ca via ACME. Proxies traffic to Vaultwarden and adds the `X-Real-IP` header. See the Traefik documentation for the full configuration
 
 No public tunnel, no Cloudflare. The service is only reachable via the local network or WireGuard.
 
@@ -55,12 +53,11 @@ No public tunnel, no Cloudflare. The service is only reachable via the local net
 
 ## Docker images
 
-Both images are pinned to tag plus SHA256 digest. Upgrades are deliberate actions.
+The image is pinned to tag plus SHA256 digest. Upgrades are deliberate actions.
 
 | Image | Version |
 |-------|---------|
 | `vaultwarden/server` | 1.35.4 |
-| `caddy` | 2.11.2-alpine |
 
 Vaultwarden 1.35.4 includes fixes for three security advisories (cipher access, collection permissions). Updating to newer versions follows the same pattern: fetch digest, update compose, `docker compose up -d`.
 
@@ -73,9 +70,9 @@ Vaultwarden 1.35.4 includes fixes for three security advisories (cipher access, 
 | `DISABLE_ICON_DOWNLOAD` | `true` | SSRF mitigation. Vaultwarden does not fetch favicons from external sites |
 | `PASSWORD_ITERATIONS` | `600000` | KDF iterations above the Bitwarden recommendation for extra brute-force protection |
 | `ADMIN_TOKEN` | Argon2id hash | The admin panel is secured with a hashed token, not plain text |
-| `IP_HEADER` | `X-Real-IP` | Caddy forwards the real client IP |
+| `IP_HEADER` | `X-Real-IP` | Traefik forwards the real client IP |
 
-The `docker-compose.yml` has `chmod 600` because it contains the Argon2 hash of the admin token. The TLS private key in the Caddy certs directory has the same restriction.
+The `docker-compose.yml` has `chmod 600` because it contains the Argon2 hash of the admin token.
 
 ## Two-factor authentication
 
@@ -88,19 +85,11 @@ The YubiKey is registered as a passkey on the Vaultwarden account. 2FAS Auth on 
 
 ## TLS
 
-Caddy uses a certificate signed by the `JacOps Homelab CA`. The cert is valid for two years and has `vault.jacops.local` as SAN. The CA is installed as a trusted root in the macOS system keychain, so all browsers trust the cert without exceptions.
+TLS termination happens on Traefik (CT 165) with automatic certificates from step-ca via the ACME protocol. Certificates are EC P-256, valid for 72 hours and automatically renewed before expiry. The step-ca root CA is installed as a trusted root in the macOS system keychain, so all browsers trust the cert without exceptions.
 
-The Caddyfile:
+Security headers (HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`) are applied globally by Traefik across all backend services.
 
-```
-vault.jacops.local {
-    tls /certs/vault.jacops.local.pem /certs/vault.jacops.local.key
-
-    reverse_proxy vaultwarden:8222 {
-        header_up X-Real-IP {remote_host}
-    }
-}
-```
+Traffic between Traefik and Vaultwarden is HTTP on the same VLAN (40, Apps). An iptables rule in the `DOCKER-USER` chain on CT 152 restricts port 8222 to the Traefik IP only, so other hosts on the VLAN cannot reach the port directly.
 
 ## Access
 
@@ -124,4 +113,4 @@ Two additional backup layers are planned as follow-up:
 
 - [roadmap](../docs/roadmap.md): Vaultwarden is the second foundation service after PBS
 - [YubiKey](../hardware/01-yubikey.md): hardware 2FA setup and homelab CA
-- [decisions](../docs/decisions.md): "Homelab CA over self-signed certificates"
+- [decisions](../docs/decisions.md): "Traefik as default reverse proxy", "step-ca as internal ACME server"

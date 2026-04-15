@@ -62,7 +62,7 @@ The runner config lives at `/var/lib/forgejo-runner/config.yml`. Registration in
 | Setting | Value | Reason |
 |---------|-------|--------|
 | `capacity` | `1` | One job at a time, prevents resource contention |
-| `NODE_EXTRA_CA_CERTS` | `/etc/ssl/certs/homelab-ca.crt` | Node.js (checkout action) trusts the homelab CA |
+| `NODE_EXTRA_CA_CERTS` | `/etc/ssl/certs/jacops-homelab-step-root-ca.crt` | Node.js (checkout action) trusts the step-ca root CA |
 | `docker_host` | `automount` | Docker socket automatically mounted in job containers |
 | Container options | CA cert and CA bundle volume mounts | TLS verification works in job containers |
 
@@ -74,14 +74,14 @@ The runner config lives at `/var/lib/forgejo-runner/config.yml`. Registration in
 | `ubuntu-22.04` | `ubuntu:22.04` | Specific Ubuntu version |
 | `debian-latest` | `debian:trixie-slim` | Lightweight Debian |
 
-### TLS and the homelab CA
+### TLS and the step-ca root CA
 
-Job containers run in isolation and do not trust the homelab CA by default. Two volume mounts solve this:
+Job containers run in isolation and do not trust the step-ca root CA by default. The CA certificate comes from the step-ca PKI (CT 164) and is made available to job containers via volume mounts:
 
-- `/usr/local/share/ca-certificates/homelab-ca.crt` is mounted as `/etc/ssl/certs/homelab-ca.crt` (individual CA certificate)
-- `/etc/ssl/certs/ca-certificates.crt` from the host is mounted into the container (full CA bundle including the homelab CA)
+- `/usr/local/share/ca-certificates/jacops-homelab-step-root-ca.crt` is mounted as `/etc/ssl/certs/jacops-homelab-step-root-ca.crt` (individual CA certificate)
+- `/etc/ssl/certs/ca-certificates.crt` from the host is mounted into the container (full CA bundle including the step-ca root CA)
 
-`NODE_EXTRA_CA_CERTS` tells Node.js to add the homelab CA to its trust list. This is needed for the `actions/checkout` step that clones the repository via HTTPS from Forgejo.
+`NODE_EXTRA_CA_CERTS` tells Node.js to add the step-ca root CA to its trust list. This is needed for the `actions/checkout` step that clones the repository via HTTPS from Forgejo.
 
 ### Forgejo-side configuration
 

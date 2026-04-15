@@ -316,3 +316,33 @@ step-ca draait als eigen LXC met een two-tier PKI: de root key gaat offline (USB
 De bestaande homelab CA blijft vertrouwd in de macOS system keychain totdat alle services zijn gemigreerd. Daarna wordt de oude CA ingetrokken.
 
 Alternatieven die afvielen: Caddy's ingebouwde CA (gekoppeld aan Caddy's lifecycle, niet geschikt als centrale PKI), Let's Encrypt voor interne services (Certificate Transparency logs onthullen interne domeinnamen, externe dependency voor intern verkeer), en de handmatige CA behouden (suboptimaal voor een cybersecurity professional, niet conform de industrie-standaard van geautomatiseerde kortstondige certificaten).
+
+## Software intermediate key in plaats van YubiKey PIV (supersedes bovenstaande)
+
+**Datum:** 2026-04-15
+**Gebied:** PKI, certificaatbeheer
+
+De oorspronkelijke beslissing specificeerde de intermediate key op YubiKey PIV slot 9c (non-exportable), waardoor elke signing een fysieke YubiKey plus PIN vereist. Bij de implementatie bleek dit incompatibel met het doel van automatische ACME-certificaatuitgifte.
+
+Het probleem: ACME-clients (Traefik) vragen certs aan zonder menselijke tussenkomst. Met de intermediate key op een YubiKey moet die key 24/7 in de Proxmox node zitten via USB passthrough. De YubiKey is dan niet meer beschikbaar voor WebAuthn-authenticatie in de browser. Bij 72-uurs certs en meerdere services zijn dat meerdere signings per dag, allemaal hardware-afhankelijk.
+
+De gekozen aanpak: software intermediate key op de step-ca LXC. De key is JWE-versleuteld op disk (PBES2-HS256+A128KW / A256GCM) met een eigen passphrase. step-ca ontsleutelt de key bij het opstarten via een password file (chmod 600, eigendom van de step user). Dit is de standaard industrie-aanpak voor two-tier PKI waar de root key offline gaat en de intermediate key het dagelijkse werk doet.
+
+De root key blijft offline op een USB-drive (met een backup in Vaultwarden). De intermediate key wordt gebackupt via PBS (wekelijkse LXC backup) en een kopie op dezelfde USB-drive. Bij verlies van de intermediate key is de recovery-procedure: root key van USB halen, nieuwe intermediate genereren en signen, step-ca herconfigureren. Bestaande leaf certs blijven geldig tot ze verlopen (72 uur).
+
+EC P-256 voor de hele chain (root, intermediate, leaf). Dit is step-ca's default, breedst getest, en voldoende voor een interne CA. P-384 voor de root voegt geen praktische veiligheid toe: de chain is zo sterk als de zwakste schakel, en de P-256 leaf bepaalt het plafond.
+
+## Centraal Traefik LXC als reverse proxy architectuur
+
+**Datum:** 2026-04-15
+**Gebied:** Reverse proxy, infrastructuur
+
+Bij de migratie van Caddy naar Traefik stonden twee architecturen ter keuze: Traefik per LXC (een 1-op-1 vervanging van Caddy) of een centraal Traefik LXC dat alle services routeert.
+
+De keuze viel op centraal. Drie redenen gaven de doorslag. Alle routing-configuratie staat op een plek, wat auditing en wijzigingen eenvoudiger maakt. Er is een ACME-client in plaats van drie, wat het aantal cert-vernieuwingen en de interactie met step-ca reduceert. Nieuwe services vragen alleen een dynamisch config-bestand op de Traefik LXC, geen Traefik-installatie per LXC.
+
+De afweging is een single point of failure. Als de Traefik LXC uitvalt, zijn alle services onbereikbaar via hun hostname. De mitigatie: Uptime Kuma monitort Traefik en stuurt een ntfy alert bij uitval, services zijn nog bereikbaar via direct IP (als noodpad), en recovery is een LXC-herstart (seconden) of een restore uit PBS (minuten).
+
+Backend verkeer tussen Traefik en de services is onversleuteld HTTP op hetzelfde VLAN. Dit is acceptabel door de VLAN-isolatie (zone-based firewall blokkeert cross-VLAN verkeer) en iptables-regels op elke backend LXC die de service-poort alleen openzetten voor het Traefik IP. Voor Docker-based services (Vaultwarden, Miniflux) zijn de regels in de DOCKER-USER chain, voor native services (Forgejo) in de INPUT chain.
+
+Globale security headers (HSTS, nosniff, frameDeny, referrerPolicy) worden op entrypoint-niveau toegepast en gelden automatisch voor alle routes. Het Traefik dashboard is beveiligd met basicAuth plus een IP allowlist die alleen interne netwerken toestaat.

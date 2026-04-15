@@ -2,7 +2,7 @@
 
 🇬🇧 English | 🇳🇱 [Nederlands](05-forgejo.nl.md)
 
-Forgejo is the self-hosted Git forge for the homelab. All code, configuration and automation related to the homelab lives here. It runs as a native binary in an LXC container behind Caddy as reverse proxy, accessible internally via `forgejo.jacops.local`.
+Forgejo is the self-hosted Git forge for the homelab. All code, configuration and automation related to the homelab lives here. It runs as a native binary in an LXC container behind Traefik as central reverse proxy, accessible internally via `forgejo.jacops.local`.
 
 ## Why Forgejo
 
@@ -13,28 +13,29 @@ Forgejo is a community fork of Gitea, licensed under GPL. The v11 LTS line is su
 ## Architecture
 
 ```
-Browser ─── HTTPS ──► Caddy (TLS termination) ──► Forgejo
-                      :443                        :3000 (localhost only)
-                      CA cert + security headers   Web UI + API
+Browser ─── HTTPS ──► Traefik (CT 165)  ──► Forgejo (CT 160)
+                      :443                   :3000
+                      step-ca ACME certs     Traefik only
+                      Security headers       (iptables firewall)
 
-Git SSH ─── TCP ──► Forgejo built-in SSH
-                    :2222
-                    Key-based auth
+Git SSH ─── SSH ──────────────────────────► Forgejo (CT 160)
+                                            :2222
+                                            Direct (not through Traefik)
 
-            LXC Container (CT 160)
-            ┌──────────────────────────────────┐
-            │  Caddy (systemd, port 443)       │
-            │  Forgejo (systemd, port 3000)    │
-            │  Forgejo SSH (port 2222)         │
-            └──────────────────────────────────┘
-            VLAN 40 (Apps)
+                LXC Container (CT 160)
+                ┌──────────────────────────────────────┐
+                │  Forgejo v11.0.12 (systemd)          │
+                │  ├─ HTTP :3000 (web + API)           │
+                │  └─ SSH :2222 (git operations)       │
+                └──────────────────────────────────────┘
+                VLAN 40 (Apps)
 ```
 
-Three listening ports on the container:
+Two listening ports on the container:
 
-- **Caddy on 443** handles TLS termination and proxies to Forgejo. Adds security headers and hides the server identifier
-- **Forgejo on 3000** listens only on `127.0.0.1`, not on the network. Only reachable through Caddy
-- **Forgejo SSH on 2222** is the built-in Go-based SSH server for git push/pull. Non-standard port to avoid a conflict with the Forgejo Runner (CT 161)
+- **Traefik on CT 165** handles TLS termination and proxies to Forgejo on port 3000. Security headers and certificate management via step-ca ACME run on the Traefik container, not on CT 160
+- **Forgejo on 3000** listens on `0.0.0.0:3000`, but an iptables INPUT chain restricts access to the Traefik container IP. Traffic from other sources is dropped
+- **Forgejo SSH on 2222** is the built-in Go-based SSH server for git push/pull. SSH traffic goes directly to CT 160 without passing through Traefik. Non-standard port to avoid a conflict with the Forgejo Runner (CT 161)
 
 No public tunnel, no Cloudflare. Only reachable via the local network or WireGuard.
 
@@ -60,12 +61,11 @@ The rootfs lives on the SATA directory rather than the NVMe thin pool. Forgejo i
 
 ## Software
 
-Binary install, no Docker. Two systemd services run on the container:
+Binary install, no Docker. One systemd service runs on the container:
 
 | Component | Version | Installation |
 |-----------|---------|-------------|
 | Forgejo | 11.0.12 (v11 LTS) | Binary in `/usr/local/bin/forgejo`, SHA256-verified against the published checksum file |
-| Caddy | 2.11.2 | Via the official Caddy APT repository |
 
 Forgejo v11 LTS is supported until July 2026. Upgrades are deliberate actions: download new binary, verify checksum, replace, restart service.
 
@@ -120,11 +120,12 @@ The Forgejo service unit includes sandbox directives that limit the blast radius
 | File | Owner | Mode | Reason |
 |------|-------|------|--------|
 | `app.ini` | `root:git` | `640` | Contains `SECRET_KEY`, `INTERNAL_TOKEN` and `JWT_SECRET`. Only readable by the git user |
-| TLS private key | `root:caddy` | `640` | Only readable by Caddy |
 
-## Caddy security headers
+TLS certificates are no longer managed locally on CT 160. Traefik on CT 165 handles all certificates via step-ca ACME.
 
-Caddy adds the following headers to all responses:
+## Security headers
+
+Traefik on CT 165 applies the following headers via a global entrypoint-level middleware. The same headers that were previously in the Caddy config are now handled centrally for all services behind Traefik:
 
 | Header | Value |
 |--------|-------|
@@ -132,7 +133,8 @@ Caddy adds the following headers to all responses:
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Server` | Removed |
+| `Server` | Removed (header strip) |
+| `X-Powered-By` | Removed (header strip) |
 
 ## Two-factor authentication
 
@@ -145,7 +147,7 @@ Same pattern as Vaultwarden and PVE: hardware key as primary factor, TOTP as ind
 
 ## TLS
 
-Caddy uses a certificate signed by the `JacOps Homelab CA`. The cert is valid for two years and has `forgejo.jacops.local` as SAN. The CA is installed as a trusted root in the macOS system keychain, so all browsers trust the cert without exceptions.
+Traefik on CT 165 automatically requests certificates from the internal step-ca ACME server. Certificates are EC P-256 with 72 hours validity and are renewed automatically before expiry. Forgejo itself no longer has any TLS configuration; all TLS termination happens at Traefik. The step-ca root CA is installed as a trusted root in the macOS system keychain, so all browsers trust the cert without exceptions.
 
 ## Access
 

@@ -316,3 +316,33 @@ step-ca runs as its own LXC with a two-tier PKI: the root key goes offline (USB 
 The existing homelab CA remains trusted in the macOS system keychain until all services have been migrated. After that the old CA will be retired.
 
 Alternatives that were ruled out: Caddy's built-in CA (tied to Caddy's lifecycle, not suitable as centralised PKI), Let's Encrypt for internal services (Certificate Transparency logs reveal internal domain names, external dependency for internal traffic), and keeping the manual CA (suboptimal for a cybersecurity professional, not in line with the industry standard of automated short-lived certificates).
+
+## Software intermediate key instead of YubiKey PIV (supersedes above)
+
+**Date:** 2026-04-15
+**Area:** PKI, certificate management
+
+The original decision specified the intermediate key on YubiKey PIV slot 9c (non-exportable), requiring a physical YubiKey plus PIN for every signing operation. During implementation this turned out to be incompatible with the goal of automatic ACME certificate issuance.
+
+The problem: ACME clients (Traefik) request certs without human intervention. With the intermediate key on a YubiKey, that key would need to sit in the Proxmox node 24/7 via USB passthrough. The YubiKey would then no longer be available for WebAuthn authentication in the browser. With 72-hour certs and multiple services, that means multiple signings per day, all hardware-dependent.
+
+The chosen approach: software intermediate key on the step-ca LXC. The key is JWE-encrypted on disk (PBES2-HS256+A128KW / A256GCM) with its own passphrase. step-ca decrypts the key at startup via a password file (chmod 600, owned by the step user). This is the standard industry approach for two-tier PKI where the root key goes offline and the intermediate key handles the daily work.
+
+The root key stays offline on a USB drive (with a backup in Vaultwarden). The intermediate key is backed up via PBS (weekly LXC backup) and a copy on the same USB drive. If the intermediate key is lost, the recovery procedure is: pull the root key from USB, generate and sign a new intermediate, reconfigure step-ca. Existing leaf certs remain valid until they expire (72 hours).
+
+EC P-256 for the entire chain (root, intermediate, leaf). This is step-ca's default, the most widely tested, and sufficient for an internal CA. P-384 for the root adds no practical security: the chain is as strong as its weakest link, and the P-256 leaf sets the ceiling.
+
+## Central Traefik LXC as reverse proxy architecture
+
+**Date:** 2026-04-15
+**Area:** Reverse proxy, infrastructure
+
+During the migration from Caddy to Traefik, two architectures were considered: Traefik per LXC (a 1-to-1 replacement of Caddy) or a central Traefik LXC that routes all services.
+
+The choice fell on central. Three reasons were decisive. All routing configuration lives in one place, which makes auditing and changes simpler. There is one ACME client instead of three, which reduces the number of cert renewals and the interaction with step-ca. New services only need a dynamic config file on the Traefik LXC, not a Traefik installation per LXC.
+
+The trade-off is a single point of failure. If the Traefik LXC goes down, all services become unreachable via their hostname. The mitigation: Uptime Kuma monitors Traefik and sends an ntfy alert on failure, services remain reachable via direct IP (as an emergency path), and recovery is an LXC restart (seconds) or a restore from PBS (minutes).
+
+Backend traffic between Traefik and the services is unencrypted HTTP on the same VLAN. This is acceptable due to VLAN isolation (zone-based firewall blocks cross-VLAN traffic) and iptables rules on each backend LXC that only open the service port for the Traefik IP. For Docker-based services (Vaultwarden, Miniflux) the rules are in the DOCKER-USER chain, for native services (Forgejo) in the INPUT chain.
+
+Global security headers (HSTS, nosniff, frameDeny, referrerPolicy) are applied at the entrypoint level and automatically apply to all routes. The Traefik dashboard is secured with basicAuth plus an IP allowlist that only permits internal networks.

@@ -62,7 +62,7 @@ De runner config staat in `/var/lib/forgejo-runner/config.yml`. De registratie-i
 | Instelling | Waarde | Reden |
 |------------|--------|-------|
 | `capacity` | `1` | Een job tegelijk, voorkomt resource contention |
-| `NODE_EXTRA_CA_CERTS` | `/etc/ssl/certs/homelab-ca.crt` | Node.js (checkout action) vertrouwt de homelab CA |
+| `NODE_EXTRA_CA_CERTS` | `/etc/ssl/certs/jacops-homelab-step-root-ca.crt` | Node.js (checkout action) vertrouwt de step-ca root CA |
 | `docker_host` | `automount` | Docker socket automatisch gemount in job containers |
 | Container options | CA cert en CA bundle volume mounts | TLS-verificatie werkt in job containers |
 
@@ -74,14 +74,14 @@ De runner config staat in `/var/lib/forgejo-runner/config.yml`. De registratie-i
 | `ubuntu-22.04` | `ubuntu:22.04` | Specifieke Ubuntu-versie |
 | `debian-latest` | `debian:trixie-slim` | Lichtgewicht Debian |
 
-### TLS en de homelab CA
+### TLS en de step-ca root CA
 
-Job containers draaien geisoleerd en vertrouwen de homelab CA niet standaard. Twee volume mounts lossen dit op:
+Job containers draaien geisoleerd en vertrouwen de step-ca root CA niet standaard. Het CA-certificaat komt van de step-ca PKI (CT 164) en wordt via volume mounts beschikbaar gemaakt in job containers:
 
-- `/usr/local/share/ca-certificates/homelab-ca.crt` wordt gemount als `/etc/ssl/certs/homelab-ca.crt` (individueel CA-certificaat)
-- `/etc/ssl/certs/ca-certificates.crt` van de host wordt gemount in de container (volledige CA-bundle inclusief homelab CA)
+- `/usr/local/share/ca-certificates/jacops-homelab-step-root-ca.crt` wordt gemount als `/etc/ssl/certs/jacops-homelab-step-root-ca.crt` (individueel CA-certificaat)
+- `/etc/ssl/certs/ca-certificates.crt` van de host wordt gemount in de container (volledige CA-bundle inclusief de step-ca root CA)
 
-`NODE_EXTRA_CA_CERTS` vertelt Node.js om de homelab CA toe te voegen aan de vertrouwde lijst. Dit is nodig voor de `actions/checkout` stap die de repository kloont via HTTPS van Forgejo.
+`NODE_EXTRA_CA_CERTS` vertelt Node.js om de step-ca root CA toe te voegen aan de vertrouwde lijst. Dit is nodig voor de `actions/checkout` stap die de repository kloont via HTTPS van Forgejo.
 
 ### Forgejo-side configuratie
 

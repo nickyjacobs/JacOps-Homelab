@@ -2,7 +2,7 @@
 
 🇬🇧 [English](07-miniflux.md) | 🇳🇱 Nederlands
 
-Miniflux is de self-hosted RSS reader van het homelab. Alle security-feeds, vendor advisories en release-tracking van de software die in het cluster draait komen hier samen. Het draait als Docker stack in een LXC-container achter Caddy als reverse proxy, intern bereikbaar via `miniflux.jacops.local`.
+Miniflux is de self-hosted RSS reader van het homelab. Alle security-feeds, vendor advisories en release-tracking van de software die in het cluster draait komen hier samen. Het draait als Docker stack in een LXC-container achter Traefik als centraal reverse proxy, intern bereikbaar via `miniflux.jacops.local`.
 
 ## Waarom self-hosted RSS
 
@@ -15,26 +15,26 @@ Miniflux is gekozen boven Changedetection.io (drie recente CVEs, waaronder SSRF 
 ## Architectuur
 
 ```
-Browser/App ─── HTTPS ──► Caddy (TLS termination) ──► Miniflux ──► PostgreSQL
-                          :443                        :8080         :5432
-                          CA-cert                     Alleen via    Alleen via
-                                                      Docker net    Docker net
+Browser/App ─── HTTPS ──► Traefik (CT 165)  ──► Miniflux ──► PostgreSQL
+                          :443                   :8080        :5432
+                          step-ca ACME certs     Alleen via   Alleen via
+                          Security headers       Traefik      Docker net
 
                 LXC Container (CT 163)
                 ┌──────────────────────────────────────┐
                 │  Docker Compose                      │
-                │  ├─ Caddy (poort 443)                │
                 │  ├─ Miniflux (poort 8080)            │
                 │  └─ PostgreSQL 16 (poort 5432)       │
                 └──────────────────────────────────────┘
                 VLAN 40 (Apps)
 ```
 
-Drie containers draaien in een enkele Docker Compose stack:
+Twee containers draaien in een enkele Docker Compose stack:
 
 - **PostgreSQL 16** is de database. Draait op het interne Docker netwerk, niet bereikbaar van buitenaf. Een healthcheck zorgt dat Miniflux pas start als de database verbindingen accepteert
-- **Miniflux** draait de feed-engine, web UI en API. Bindt op poort 8080 binnen het Docker-netwerk, alleen bereikbaar via Caddy
-- **Caddy** handelt TLS-terminatie af met een certificaat ondertekend door de [homelab CA](../hardware/01-yubikey.nl.md). Proxied verkeer door naar Miniflux en voegt de `X-Real-IP` header toe
+- **Miniflux** draait de feed-engine, web UI en API. Bindt op poort 8080 en is alleen bereikbaar via Traefik op CT 165. Toegang tot poort 8080 is beperkt tot het IP van Traefik via de iptables `DOCKER-USER` chain
+
+TLS-terminatie en security headers worden afgehandeld door Traefik op CT 165. Traefik haalt automatisch certificaten op bij de interne step-ca ACME server. Zie [decisions.nl.md](../docs/decisions.nl.md) voor de onderbouwing van de migratie van per-LXC Caddy naar centraal Traefik.
 
 Geen publieke tunnel, geen Cloudflare. De service is alleen bereikbaar via het lokale netwerk of WireGuard.
 
@@ -56,7 +56,7 @@ Geen publieke tunnel, geen Cloudflare. De service is alleen bereikbaar via het l
 | Features | `nesting=1` (vereist voor Docker) |
 | Tags | `docker`, `homelab`, `miniflux` |
 
-De roadmap specificeerde 256 MB RAM en 3 GB disk. Beiden zijn opgehoogd: 512 MB omdat Miniflux, PostgreSQL, Caddy en de Docker daemon samen niet in 256 MB passen, en 5 GB omdat Docker images (~400-500 MB) plus PostgreSQL data en Docker overlay 3 GB krap maken. In de praktijk gebruikt de stack ~74 MB idle. Zie [decisions.nl.md](../docs/decisions.nl.md) voor de onderbouwing.
+De roadmap specificeerde 256 MB RAM en 3 GB disk. Beiden zijn opgehoogd: 512 MB omdat Miniflux, PostgreSQL en de Docker daemon samen niet in 256 MB passen, en 5 GB omdat Docker images plus PostgreSQL data en Docker overlay 3 GB krap maken. In de praktijk gebruikt de stack ~74 MB idle. Zie [decisions.nl.md](../docs/decisions.nl.md) voor de onderbouwing.
 
 ## Docker images
 
@@ -66,7 +66,6 @@ Alle images zijn gepind op tag plus SHA256 digest. Upgrades zijn bewuste acties.
 |-------|--------|
 | `miniflux/miniflux` | 2.2.6 |
 | `postgres` | 16-alpine |
-| `caddy` | 2.11.2-alpine |
 
 ## Feeds
 
@@ -131,19 +130,9 @@ Miniflux heeft een REST API op `https://miniflux.jacops.local/v1/`. Een API key 
 
 ## TLS
 
-Caddy gebruikt een certificaat ondertekend door de `JacOps Homelab CA`. Het cert is geldig voor twee jaar (tot april 2028) en heeft `miniflux.jacops.local` als SAN. De CA staat als trusted root in de macOS system keychain, waardoor alle browsers het cert vertrouwen zonder exceptions.
+TLS wordt afgehandeld door Traefik op CT 165 met automatische certificaten van de interne step-ca ACME server. Certificaten zijn EC P-256 met een geldigheid van 72 uur en worden automatisch vernieuwd via het ACME protocol. Security headers (HSTS, X-Frame-Options, nosniff) worden globaal toegepast door Traefik middleware.
 
-De Caddyfile:
-
-```
-miniflux.jacops.local {
-    tls /certs/miniflux.jacops.local.pem /certs/miniflux.jacops.local.key
-
-    reverse_proxy miniflux:8080 {
-        header_up X-Real-IP {remote_host}
-    }
-}
-```
+Verkeer tussen Traefik en Miniflux loopt als HTTP over hetzelfde VLAN. Toegang tot poort 8080 op CT 163 is beperkt tot het IP van Traefik via de iptables `DOCKER-USER` chain, zodat andere hosts op het Apps VLAN niet rechtstreeks bij Miniflux kunnen.
 
 ## Toegang
 
