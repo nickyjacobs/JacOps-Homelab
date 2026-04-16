@@ -25,7 +25,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | [network/](network/) | Architectuur, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM-hygiene, monitoring |
 | [hardware/](hardware/) | Fysieke apparatuur: YubiKey hardware 2FA |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner, Miniflux, step-ca, Traefik |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner, Miniflux, step-ca, Traefik, Beszel |
 | [docs/](docs/) | Ontwerpbeslissingen en geleerde lessen |
 
 ## Tech stack
@@ -37,7 +37,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 - **VPN:** WireGuard met dynamic DNS
 - **Reverse proxy:** Traefik v3.6 centraal met automatische ACME-certificaten
 - **PKI:** step-ca als interne ACME server met two-tier PKI
-- **Monitoring:** Uptime Kuma met self-hosted ntfy voor alerts
+- **Monitoring:** Uptime Kuma (reachability) plus Beszel (host-metrics), self-hosted ntfy voor alerts
 - **Backups:** Proxmox Backup Server met dedup en verify
 - **Automatisering:** n8n
 - **Security tooling:** Wazuh (gepland na eJPT)
@@ -70,6 +70,7 @@ Deze eerste release dekt de netwerklaag volledig. Documentatie van het Proxmox c
 | Miniflux RSS reader gedocumenteerd | Klaar |
 | step-ca interne ACME server gedocumenteerd | Klaar |
 | Traefik centraal reverse proxy gedocumenteerd | Klaar |
+| Beszel host-metrics monitoring gedocumenteerd | Klaar |
 
 ## Over JacOps
 

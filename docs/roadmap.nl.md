@@ -110,15 +110,17 @@ DNS-records voor alle geproxyde services (miniflux, forgejo, vault) wijzen via U
 
 Volledige documentatie in [services/09-traefik.nl.md](../services/09-traefik.nl.md).
 
+**8. Beszel**
+
+Beszel v0.18.7 als Docker container in CT 151 naast Uptime Kuma, ntfy en cloudflared. Image gepind op tag plus SHA256 digest. Hub op poort 8090, intern bereikbaar via `beszel.jacops.local` achter Traefik met automatisch step-ca certificaat.
+
+Negen agents geinstalleerd: zeven foundation-LXCs (CT 151, 152, 160, 161, 163, 164, 165) via SSH-mode op poort 45876, twee PVE-nodes (srv-01, srv-02) via WebSocket-mode met per-system token direct naar de hub. De PVE-nodes vereisten een gerichte UniFi firewall-regel (Servers naar Apps, device-based, poort 8090 TCP) omdat de zone-firewall cross-VLAN verkeer standaard blokkeert.
+
+Backend-firewall op CT 151: DOCKER-USER chain met ACCEPT voor de PVE-node IPs en Traefik, DROP voor de rest. Alerting via ntfy (Shoutrrr) met thresholds op CPU, RAM en disk (80%, 10 minuten) plus status alerts op alle negen systemen.
+
+Volledige documentatie in [services/10-beszel.nl.md](../services/10-beszel.nl.md).
+
 ### Komend (volgorde bindend)
-
-**8. Beszel hub plus agents** (was #6, hernummerd na step-ca en Traefik)
-
-**6. Beszel hub plus agents**
-
-Hub in CT 151 naast de bestaande monitoring-stack, <50 MB RAM totaal voor hub en alle agents samen. Agents als Go-binary op beide PVE-nodes plus alle nieuwe foundation-LXCs. Intern-only via `beszel.jacops.local`.
-
-Uptime Kuma blijft reachability doen, Beszel voegt host-metrics toe (CPU, RAM, disk, netwerk). De twee overlappen niet.
 
 **9. Dockge**
 
@@ -215,3 +217,4 @@ Het plan is in deze sessie drie keer aangepast:
 5. Tijdens de avondsessie van 2026-04-13 is de Forgejo Runner gedeployed op CT 161 (Node 2). Docker CE en forgejo-runner v12.8.2 met twee shadow-run workflows (gitleaks, lychee). Actions ingeschakeld in Forgejo. Debian 13 voor consistentie.
 6. Tijdens de sessie van 2026-04-14 is Miniflux v2.2.6 gedeployed op CT 163 (Node 1). Docker Compose met PostgreSQL 16 en Caddy. 19 feeds in drie categorieen. ntfy integratie en Uptime Kuma monitor. RAM en disk opgehoogd van roadmap-spec. Architectuurbeslissingen genomen: Traefik als standaard reverse proxy (vervangt Caddy), step-ca als interne ACME server (vervangt handmatige OpenSSL CA).
 7. Tijdens de sessie van 2026-04-15 zijn step-ca v0.30.2 (CT 164) en Traefik v3.6.13 (CT 165) gedeployed. Two-tier PKI met offline root key op USB en software intermediate key (YubiKey PIV afgevallen wegens incompatibiliteit met automatische ACME). Caddy verwijderd van CT 152, 160 en 163. Backend firewalling met iptables per LXC. Drie services gemigreerd naar centraal Traefik met automatische step-ca certificaten (72 uur lifetime).
+8. Tijdens de sessie van 2026-04-16 is Beszel v0.18.7 gedeployed in CT 151. Negen agents: zeven LXCs via SSH-mode, twee PVE-nodes via WebSocket-mode met gerichte cross-VLAN firewall-regel. Universal token afgewezen ten gunste van handmatige per-system registratie. ntfy alerting en Uptime Kuma monitor geconfigureerd.

@@ -218,3 +218,27 @@ Forgejo Actions is compatibel met het GitHub Actions workflow-formaat, maar dat 
 De oplossing was de tools als CLI binary direct in de workflow te installeren in plaats van de action wrappers te gebruiken. Beide tools zijn gratis en open source, de wrappers voegen alleen gemak toe dat niet werkt buiten GitHub.
 
 **Les:** test elke GitHub Action die je naar Forgejo migreert individueel. Composite actions en actions die GitHub-specifieke APIs aanroepen (code scanning, annotations, issue creation) zijn de meest waarschijnlijke breekpunten. CLI-based workflows zijn draagbaarder dan action-based workflows.
+
+## Cross-VLAN is volledig dicht, ook van Servers naar Apps
+
+Bij de Beszel-deploy was de aanname dat de PVE-nodes (Servers VLAN) het Apps VLAN konden bereiken. De decisions-doc beschrijft dat "de hypervisors het Apps-subnet kunnen bereiken voor containerbeheer". Dat klopt voor het management plane: `pct exec` werkt via een lokale Unix socket op de hypervisor, niet via het netwerk. Voor TCP-verkeer via het netwerk (bijvoorbeeld een Beszel agent die via WebSocket verbindt met de hub) is het verkeer geblokkeerd door de zone-firewall in beide richtingen.
+
+De oplossing was een gerichte UniFi firewall-policy: bron device-based (alleen de twee PVE-nodes), doel een specifiek IP (CT 151) op een specifieke poort (8090 TCP). Dat is het smalste gat mogelijk zonder het zone-model te doorbreken.
+
+**Les:** `pct exec` bewijst niet dat netwerkverkeer tussen twee VLANs kan stromen. Het management plane en het data plane zijn gescheiden paden. Test altijd met een echte TCP-verbinding (curl, ping) voordat je aanneemt dat cross-VLAN communicatie werkt.
+
+## DNS-record moet bestaan voor een Traefik ACME-aanvraag
+
+De Traefik dynamic config voor `beszel.jacops.local` werd aangemaakt voordat het DNS-record in UniFi bestond. Traefik laadde de route en triggerde een ACME-aanvraag bij step-ca. Die aanvraag gebruikt tls-alpn-01, wat vereist dat step-ca de hostname resolved en op poort 443 verbindt. Zonder DNS-record faalde de challenge, en Traefik viel terug op het default certificaat (`CN=TRAEFIK DEFAULT CERT`).
+
+Traefik herprobeert gefaalde ACME-aanvragen niet automatisch. Het resultaat was een werkende route met een ongeldig certificaat. Pas na een Traefik-restart werd de aanvraag opnieuw getriggerd en slaagde die.
+
+**Les:** bij het toevoegen van een nieuwe Traefik route: maak altijd eerst het DNS-record aan, dan pas de dynamic config. Als de volgorde andersom was (zoals hier), herstart Traefik na het aanmaken van het DNS-record om de ACME-aanvraag te triggeren.
+
+## Shoutrrr ntfy auth vereist token als password, niet als username
+
+Beszel gebruikt Shoutrrr voor webhook-notificaties. Het ntfy URL-formaat `ntfy://token@host/topic` plaatst het token in het username-veld. ntfy herkent dat niet als authenticatie en weigert het bericht met een auth-error.
+
+Het juiste formaat is `ntfy://:token@host/topic` met een dubbele punt voor het token. De lege username en het token als password zorgt dat Shoutrrr het als Bearer token meestuurt in de Authorization header.
+
+**Les:** bij Shoutrrr URL-configuratie voor ntfy: let op de dubbele punt voor het token. Het verschil tussen `ntfy://tk_abc@host/topic` (fout) en `ntfy://:tk_abc@host/topic` (goed) is een enkel karakter dat het verschil maakt tussen authenticatiefout en werkende notificaties.

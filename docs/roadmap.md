@@ -110,13 +110,17 @@ DNS records for all proxied services (miniflux, forgejo, vault) point to the Tra
 
 Full documentation in [services/09-traefik.md](../services/09-traefik.md).
 
+**8. Beszel**
+
+Beszel v0.18.7 as a Docker container in CT 151 alongside Uptime Kuma, ntfy and cloudflared. Image pinned on tag plus SHA256 digest. Hub on port 8090, internally reachable via `beszel.jacops.local` behind Traefik with an automatic step-ca certificate.
+
+Nine agents installed: seven foundation LXCs (CT 151, 152, 160, 161, 163, 164, 165) via SSH mode on port 45876, two PVE nodes (srv-01, srv-02) via WebSocket mode with per-system tokens connecting directly to the hub. The PVE nodes required a targeted UniFi firewall rule (Servers to Apps, device-based, port 8090 TCP) because the zone firewall blocks cross-VLAN traffic by default.
+
+Backend firewall on CT 151: DOCKER-USER chain with ACCEPT for the PVE node IPs and Traefik, DROP for everything else. Alerting via ntfy (Shoutrrr) with thresholds on CPU, RAM and disk (80%, 10 minutes) plus status alerts on all nine systems.
+
+Full documentation in [services/10-beszel.md](../services/10-beszel.md).
+
 ### Coming up (order binding)
-
-**8. Beszel hub plus agents** (was #6, renumbered after step-ca and Traefik)
-
-Hub in CT 151 alongside the existing monitoring stack, under 50 MB RAM total for hub and all agents combined. Agents as a Go binary on both PVE nodes plus all new foundation LXCs. Internal-only through `beszel.jacops.local`.
-
-Uptime Kuma keeps doing reachability, Beszel adds host metrics (CPU, RAM, disk, network). The two do not overlap.
 
 **9. Dockge**
 
@@ -213,3 +217,4 @@ The plan was adjusted three times during the 2026-04-11 session:
 5. During the evening session of 2026-04-13, the Forgejo Runner was deployed on CT 161 (Node 2). Docker CE and forgejo-runner v12.8.2 with two shadow-run workflows (gitleaks, lychee). Actions enabled in Forgejo. Debian 13 for consistency.
 6. During the session of 2026-04-14, Miniflux v2.2.6 was deployed on CT 163 (Node 1). Docker Compose with PostgreSQL 16 and Caddy. 19 feeds in three categories. ntfy integration and Uptime Kuma monitor. RAM and disk increased from roadmap spec. Architecture decisions made: Traefik as standard reverse proxy (replacing Caddy), step-ca as internal ACME server (replacing manual OpenSSL CA).
 7. During the session of 2026-04-15, step-ca v0.30.2 (CT 164) and Traefik v3.6.13 (CT 165) were deployed. Two-tier PKI with offline root key on USB and software intermediate key (YubiKey PIV dropped due to incompatibility with automatic ACME). Caddy removed from CT 152, 160 and 163. Backend firewalling with iptables per LXC. Three services migrated to central Traefik with automatic step-ca certificates (72-hour lifetime).
+8. During the session of 2026-04-16, Beszel v0.18.7 was deployed in CT 151. Nine agents: seven LXCs via SSH mode, two PVE nodes via WebSocket mode with a targeted cross-VLAN firewall rule. Universal token rejected in favour of manual per-system registration. ntfy alerting and Uptime Kuma monitor configured.

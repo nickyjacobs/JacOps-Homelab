@@ -17,6 +17,7 @@ Self-hosted services running in the homelab. Each service runs in its own LXC co
 | [07-miniflux.md](07-miniflux.md) | Miniflux RSS reader | Running |
 | [08-step-ca.md](08-step-ca.md) | step-ca internal ACME server | Running |
 | [09-traefik.md](09-traefik.md) | Traefik central reverse proxy | Running |
+| [10-beszel.md](10-beszel.md) | Beszel host metrics monitoring | Running |
 
 ## Planned
 

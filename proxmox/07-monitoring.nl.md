@@ -86,19 +86,13 @@ Naast de passieve monitoring zijn er handmatige checks die regelmatig worden uit
 
 **Bij een deploy.** De check-lijst uit [06-vm-hygiene.nl.md](06-vm-hygiene.nl.md) valt technisch ook onder monitoring: het is een post-change verificatie dat de nieuwe guest op de juiste manier is aangehaakt in de cluster.
 
-## Beszel-deploy (gepland)
+## Beszel
 
-De rol van Beszel in dit plan is specifiek. Uit de roadmap ([Fase 1, stap 6](../docs/roadmap.nl.md)):
+Beszel v0.18.7 draait als Docker container in CT 151, naast Uptime Kuma en ntfy. De hub verzamelt metrics van negen agents: zeven foundation-LXCs via SSH-mode en twee PVE-nodes via WebSocket-mode. De UI is intern bereikbaar via `beszel.jacops.local` achter Traefik.
 
-- **Hub** draait in CT 151 naast de bestaande Uptime Kuma stack, minder dan 50 MB RAM extra
-- **Agents** als Go-binary op beide PVE-nodes plus alle foundation-LXC's
-- **Metrics** die de hub ontvangt: CPU-load, RAM, disk, netwerk, containers
-- **UI** intern bereikbaar via `beszel.jacops.local`, geen publieke tunnel
-- **Alerting** via thresholds, destination ntfy
+De agents meten CPU, RAM, disk, disk-IO, netwerk, load average, temperatuur en actieve services. Alerts staan ingesteld op 80% drempel (10 minuten venster) voor CPU, geheugen en disk, plus status-alerts bij uitval. Notificaties lopen via ntfy over het interne Docker netwerk.
 
-De deploy zelf volgt na Vaultwarden, Forgejo, Forgejo Runner en Miniflux. De reden voor die volgorde is dat Beszel's waarde pas komt wanneer er iets te meten is dat meer is dan de twee nodes zelf. De foundation-CTs (Forgejo, Vaultwarden) zijn dan de eerste workloads die naast reachability-checks ook host-profielen verdienen.
-
-Tot Beszel draait blijft de operationele check maandelijks via de PVE web UI, en wordt daarbij bewust geaccepteerd dat een plotse resource-piek pas tijdens de maandelijkse review in beeld komt. Het homelab is stabiel genoeg om die latency te tolereren.
+Volledige documentatie in [services/10-beszel.nl.md](../services/10-beszel.nl.md).
 
 ## Resultaat
 
@@ -111,7 +105,7 @@ De huidige monitoring-staat:
 
 De bekende gaten:
 
-1. **Geen geschiedenis van host-metrics** buiten wat PVE RRD-caches, wordt opgelost door Beszel in Fase 1.
+1. ~~Geen geschiedenis van host-metrics~~ Opgelost door Beszel, zie hierboven.
 2. **Geen SMART-monitoring** voor de disks zelf, wordt opgelost door een kleine smartmontools-cron wanneer die gebouwd wordt.
 3. **Geen centrale log-aggregatie**, bewust uitgesteld tot na de foundation-laag omdat de complexiteit niet in verhouding staat tot de waarde op deze schaal.
 

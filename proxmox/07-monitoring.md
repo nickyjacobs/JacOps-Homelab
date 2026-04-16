@@ -86,19 +86,13 @@ Alongside passive monitoring there are manual checks performed regularly that to
 
 **On every deploy.** The checklist from [06-vm-hygiene.md](06-vm-hygiene.md) technically also falls under monitoring: it is a post-change verification that the new guest is hooked into the cluster correctly.
 
-## Beszel deploy (planned)
+## Beszel
 
-Beszel's role in this plan is specific. From the roadmap ([Phase 1, step 6](../docs/roadmap.md)):
+Beszel v0.18.7 runs as a Docker container in CT 151, alongside Uptime Kuma and ntfy. The hub collects metrics from nine agents: seven foundation LXCs via SSH mode and two PVE nodes via WebSocket mode. The UI is internally reachable at `beszel.jacops.local` behind Traefik.
 
-- **Hub** runs in CT 151 next to the existing Uptime Kuma stack, under 50 MB RAM extra
-- **Agents** as a Go binary on both PVE nodes plus all foundation LXCs
-- **Metrics** the hub receives: CPU load, RAM, disk, network, containers
-- **UI** reachable internally via `beszel.jacops.local`, no public tunnel
-- **Alerting** through thresholds, destination ntfy
+The agents measure CPU, RAM, disk, disk I/O, network, load average, temperature and active services. Alerts are set at 80% thresholds (10-minute window) for CPU, memory and disk, plus status alerts on failure. Notifications route through ntfy over the internal Docker network.
 
-The deploy itself follows Vaultwarden, Forgejo, Forgejo Runner, and Miniflux. The reason for that order is that Beszel's value only kicks in when there is more to measure than the two nodes themselves. The foundation CTs (Forgejo, Vaultwarden) will by then be the first workloads that deserve host profiles on top of reachability checks.
-
-Until Beszel runs, the operational check stays monthly through the PVE web UI, and it is deliberately accepted that a sudden resource spike only comes into view during the monthly review. The homelab is stable enough to tolerate that latency.
+Full documentation in [services/10-beszel.md](../services/10-beszel.md).
 
 ## Result
 
@@ -111,7 +105,7 @@ The current monitoring state:
 
 The known gaps:
 
-1. **No history for host metrics** beyond what PVE RRD caches, to be solved by Beszel in Phase 1.
+1. ~~No history for host metrics~~ Solved by Beszel, see above.
 2. **No SMART monitoring** for the disks themselves, to be solved by a small smartmontools cron when that gets built.
 3. **No central log aggregation**, deliberately deferred until after the foundation layer because the complexity is out of proportion with the value at this scale.
 

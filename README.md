@@ -25,7 +25,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | [network/](network/) | Architecture, VLANs, zone-based firewall, WireGuard VPN, hardening |
 | [proxmox/](proxmox/) | Cluster setup, hardening, backups, storage, networking, VM hygiene, monitoring |
 | [hardware/](hardware/) | Physical equipment: YubiKey hardware 2FA |
-| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner, Miniflux, step-ca, Traefik |
+| [services/](services/) | Self-hosted services: n8n, Uptime Kuma, ntfy, Vaultwarden, Forgejo, Forgejo Runner, Miniflux, step-ca, Traefik, Beszel |
 | [docs/](docs/) | Design decisions and lessons learned |
 
 ## Tech stack
@@ -37,7 +37,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 - **VPN:** WireGuard with dynamic DNS
 - **Reverse proxy:** Traefik v3.6 central with automatic ACME certificates
 - **PKI:** step-ca as internal ACME server with two-tier PKI
-- **Monitoring:** Uptime Kuma with self-hosted ntfy for alerts
+- **Monitoring:** Uptime Kuma (reachability) plus Beszel (host metrics), self-hosted ntfy for alerts
 - **Backups:** Proxmox Backup Server with dedup and verify
 - **Automation:** n8n
 - **Security tooling:** Wazuh (planned after eJPT)
@@ -70,6 +70,7 @@ This first release covers the network layer end to end. Proxmox cluster and self
 | Miniflux RSS reader documented | Done |
 | step-ca internal ACME server documented | Done |
 | Traefik central reverse proxy documented | Done |
+| Beszel host metrics monitoring documented | Done |
 
 ## About JacOps
 
